@@ -1,0 +1,447 @@
+import Link from "next/link";
+import {
+  Bot,
+  Building2,
+  CheckCircle2,
+  Database,
+  HardDrive,
+  KeyRound,
+  Palette,
+  Plus,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Users,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+import { requireUser, canManageBrand } from "@/lib/auth";
+import { getActiveBrand } from "@/lib/brand-context";
+import {
+  getBrandProfile,
+  getRetentionStats,
+  getSetting,
+  listBrands,
+  listUsers,
+} from "@/lib/data";
+import { aiStatus } from "@/lib/ai";
+import { PLATFORM_ORDER, platformMeta } from "@/lib/platforms";
+import { fileSize, safeJson } from "@/lib/utils";
+import {
+  createBrandAction,
+  inviteUserAction,
+  updateBrandBasicsAction,
+  updateBrandProfileAction,
+} from "@/app/actions/brand";
+import { runRetentionAction, saveRetentionAction } from "@/app/actions/settings";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  Field,
+  Input,
+  Notice,
+  PageHeader,
+  Select,
+  Textarea,
+} from "@/components/ui";
+
+export const dynamic = "force-dynamic";
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    saved?: string;
+    error?: string;
+    retentionDryRun?: string;
+    notifications?: string;
+    sessions?: string;
+    pruned?: string;
+  }>;
+}) {
+  const user = await requireUser();
+  const brand = await getActiveBrand();
+  const profile = getBrandProfile(brand.id);
+  const brands = listBrands();
+  const users = listUsers();
+  const retention = getRetentionStats();
+  const hotDays = getSetting("retention.hot_days", "90");
+  const voiceDays = getSetting("retention.voice_audio_days", "7");
+  const ai = aiStatus();
+  const params = await searchParams;
+  const canManage = canManageBrand(user);
+  const pillars = safeJson<string[]>(profile?.pillars, []).join("\n");
+
+  return (
+    <div className="space-y-6 fade-up">
+      <PageHeader
+        eyebrow={`${brand.name} · workspace settings`}
+        title="Settings"
+        description="Brand voice, channels, the team, AI keys and the data lifecycle. This is the part that keeps the hub honest."
+        actions={<Badge tone={ai.configured ? "teal" : "gold"}>{ai.configured ? "Gemini connected" : "Demo AI"}</Badge>}
+      />
+
+      {params.saved ? <Notice tone="success">Settings saved.</Notice> : null}
+      {params.error ? <Notice tone="error">{params.error}</Notice> : null}
+      {params.retentionDryRun ? (
+        <Notice tone="info">
+          Dry run: {params.notifications} notifications and {params.sessions} sessions would be removed.
+          Nothing was deleted.
+        </Notice>
+      ) : null}
+      {params.pruned ? (
+        <Notice tone="success">
+          Pruned {params.notifications} notifications and {params.sessions} sessions. Business records were
+          untouched.
+        </Notice>
+      ) : null}
+
+      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-5">
+          <Card>
+            <CardHeader
+              title="Brand basics"
+              description="The name, handle and colour used across the hub and reports."
+              action={<Building2 className="h-4 w-4 text-muted" />}
+            />
+            <form action={updateBrandBasicsAction} className="grid gap-4 p-5 sm:grid-cols-2">
+              <Field label="Brand name" htmlFor="brand-name">
+                <Input id="brand-name" name="name" defaultValue={brand.name} required />
+              </Field>
+              <Field label="Handle" htmlFor="brand-handle">
+                <Input id="brand-handle" name="handle" defaultValue={brand.handle} />
+              </Field>
+              <Field label="Niche" htmlFor="brand-niche">
+                <Input id="brand-niche" name="niche" defaultValue={brand.niche} />
+              </Field>
+              <Field label="Brand colour" htmlFor="brand-color" hint="Used in the UI and report covers.">
+                <Input id="brand-color" name="color" type="color" defaultValue={brand.color} className="h-10 p-1" />
+              </Field>
+              <div className="sm:col-span-2">
+                <Button type="submit" variant="primary" size="sm" disabled={!canManage}>
+                  Save brand basics
+                </Button>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Brand voice & guardrails"
+              description="This is what every generator reads before it writes a word."
+              action={<Palette className="h-4 w-4 text-muted" />}
+            />
+            <form action={updateBrandProfileAction} className="space-y-4 p-5">
+              <Field label="Tone" htmlFor="tone" hint="How the brand sounds. Be specific: rhythm, warmth, vocabulary.">
+                <Textarea id="tone" name="tone" rows={3} defaultValue={profile?.tone ?? ""} />
+              </Field>
+              <Field label="Audience" htmlFor="audience" hint="Who it is for, where they are, what they care about.">
+                <Textarea id="audience" name="audience" rows={2} defaultValue={profile?.audience ?? ""} />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Content pillars" htmlFor="pillars" hint="One per line.">
+                  <Textarea id="pillars" name="pillars" rows={5} defaultValue={pillars} />
+                </Field>
+                <Field label="Offers / products" htmlFor="offers">
+                  <Textarea id="offers" name="offers" rows={5} defaultValue={profile?.offers ?? ""} />
+                </Field>
+              </div>
+              <Field label="Banned claims / words" htmlFor="bannedClaims" hint="Comma separated. The safety check flags these.">
+                <Textarea
+                  id="bannedClaims"
+                  name="bannedClaims"
+                  rows={2}
+                  defaultValue={profile?.banned_claims ?? ""}
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Preferred hashtags" htmlFor="hashtags">
+                  <Textarea id="hashtags" name="hashtags" rows={2} defaultValue={profile?.hashtags ?? ""} />
+                </Field>
+                <Field label="CTA style" htmlFor="ctas">
+                  <Textarea id="ctas" name="ctas" rows={2} defaultValue={profile?.ctas ?? ""} />
+                </Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Competitors" htmlFor="competitors">
+                  <Input id="competitors" name="competitors" defaultValue={profile?.competitors ?? ""} />
+                </Field>
+                <Field label="Notes" htmlFor="notes" hint="Disclosure rules, approvals, anything the writer must remember.">
+                  <Input id="notes" name="notes" defaultValue={profile?.notes ?? ""} />
+                </Field>
+              </div>
+              <Button type="submit" variant="primary" size="sm" disabled={!canManage}>
+                Save brand voice
+              </Button>
+            </form>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Channels"
+              description="All six are in assisted mode until the developer apps are approved."
+              action={<WifiOff className="h-4 w-4 text-muted" />}
+            />
+            <div className="divide-y divide-line/70">
+              {PLATFORM_ORDER.map((platform) => {
+                const meta = platformMeta(platform);
+                return (
+                  <div key={platform} className="flex items-start gap-3 px-5 py-3.5">
+                    <span
+                      className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold text-white"
+                      style={{ backgroundColor: meta.color }}
+                    >
+                      {meta.short}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-ink">{meta.label}</p>
+                        <Badge tone="gold">Assisted</Badge>
+                      </div>
+                      <p className="mt-1 text-[10px] leading-relaxed text-muted">{meta.assistedNote}</p>
+                    </div>
+                    <span className="mt-1 text-[9px] font-bold uppercase tracking-[0.08em] text-muted">No API</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="border-t border-line bg-cream/30 px-5 py-3">
+              <p className="text-[10px] leading-relaxed text-muted">
+                When Meta, Google, LinkedIn, X and TikTok credentials are added, these rows switch to
+                live publishing without a data migration. Until then, every post gets a copy-and-open kit.
+              </p>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Create another brand"
+              description="For a new client or a second brand under the same client."
+              action={<Plus className="h-4 w-4 text-muted" />}
+            />
+            <form action={createBrandAction} className="grid gap-4 p-5 sm:grid-cols-2">
+              <Field label="Name" htmlFor="new-name">
+                <Input id="new-name" name="name" placeholder="e.g. Lumen Body" required />
+              </Field>
+              <Field label="Handle" htmlFor="new-handle">
+                <Input id="new-handle" name="handle" placeholder="@lumenbody" />
+              </Field>
+              <Field label="Niche" htmlFor="new-niche">
+                <Input id="new-niche" name="niche" placeholder="Body care" />
+              </Field>
+              <Field label="Colour" htmlFor="new-color">
+                <Input id="new-color" name="color" type="color" defaultValue="#FF5A36" className="h-10 p-1" />
+              </Field>
+              <div className="sm:col-span-2">
+                <Button type="submit" variant="coral" size="sm" disabled={!canManage}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Create brand
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+
+        <div className="space-y-5">
+          <Card>
+            <CardHeader
+              title="AI & keys"
+              description="The hub runs in demo mode until a key is present."
+              action={<KeyRound className="h-4 w-4 text-muted" />}
+            />
+            <div className="space-y-3 p-5">
+              <div className="flex items-center justify-between rounded-xl bg-cream/50 px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-ink/60" />
+                  <div>
+                    <p className="text-[11px] font-semibold text-ink">
+                      {ai.configured ? "Gemini" : "Demo templates"}
+                    </p>
+                    <p className="text-[9px] text-muted">{ai.model}</p>
+                  </div>
+                </div>
+                <Badge tone={ai.configured ? "teal" : "gold"}>{ai.configured ? "Live" : "Offline"}</Badge>
+              </div>
+              <div className="rounded-xl border border-line bg-white p-3">
+                <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted">.env.local</p>
+                <pre className="mt-2 overflow-x-auto text-[10px] leading-relaxed text-ink/70">{`GEMINI_API_KEY=...
+DEEPSEEK_API_KEY=...
+SEARCH_API_KEY=...
+META_APP_ID=...
+GOOGLE_CLIENT_ID=...
+LINKEDIN_CLIENT_ID=...
+X_CLIENT_ID=...
+TIKTOK_CLIENT_KEY=...
+WHATSAPP_ACCESS_TOKEN=...
+RESEND_API_KEY=...
+S3_ENDPOINT=...`}</pre>
+              </div>
+              <p className="text-[10px] leading-relaxed text-muted">
+                Gemini is used for writing, extraction and transcription. DeepSeek is wired as an
+                OpenAI-compatible fallback in the provider layer. No key means the hub still works, with
+                clearly labelled demo copy.
+              </p>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Team"
+              description="Owner, manager, editor or viewer."
+              action={<Users className="h-4 w-4 text-muted" />}
+            />
+            <div className="divide-y divide-line/70">
+              {users.map((member) => (
+                <div key={member.id} className="flex items-center gap-2.5 px-5 py-3">
+                  <Avatar name={member.name} color={member.avatar_color} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-semibold text-ink">{member.name}</p>
+                    <p className="truncate text-[9px] text-muted">{member.email}</p>
+                  </div>
+                  <Badge tone="neutral">{member.role}</Badge>
+                </div>
+              ))}
+            </div>
+            {user.role === "owner" ? (
+              <form action={inviteUserAction} className="space-y-2.5 border-t border-line bg-cream/30 p-5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted">Add a teammate</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input name="name" placeholder="Name" required />
+                  <Input name="email" type="email" placeholder="Email" required />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select name="role" defaultValue="editor">
+                    <option value="manager">Manager</option>
+                    <option value="editor">Editor</option>
+                    <option value="viewer">Viewer</option>
+                  </Select>
+                  <Input name="password" type="text" placeholder="Temp password" defaultValue="password123" />
+                </div>
+                <Button type="submit" variant="outline" size="sm" className="w-full">
+                  Add teammate
+                </Button>
+              </form>
+            ) : null}
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Data & retention"
+              description="No monthly wipe. Archive and prune, with a preview first."
+              action={<Database className="h-4 w-4 text-muted" />}
+            />
+            <div className="space-y-4 p-5">
+              <div className="flex items-center justify-between rounded-xl bg-cream/50 px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <HardDrive className="h-4 w-4 text-ink/60" />
+                  <div>
+                    <p className="text-[11px] font-semibold text-ink">Database size</p>
+                    <p className="text-[9px] text-muted">SQLite · local storage</p>
+                  </div>
+                </div>
+                <p className="text-sm font-bold text-ink">{fileSize(retention.dbSize)}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {retention.rows.slice(0, 8).map((row) => (
+                  <div key={row.table} className="rounded-lg border border-line bg-white px-2.5 py-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted">{row.table.replaceAll("_", " ")}</p>
+                    <p className="mt-0.5 text-sm font-semibold text-ink">{row.count}</p>
+                  </div>
+                ))}
+              </div>
+
+              <form action={saveRetentionAction} className="space-y-2.5 border-t border-line pt-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Hot window (days)" htmlFor="hotDays">
+                    <Input id="hotDays" name="hotDays" type="number" min={30} max={365} defaultValue={hotDays} />
+                  </Field>
+                  <Field label="Voice audio (days)" htmlFor="voiceDays">
+                    <Input id="voiceDays" name="voiceDays" type="number" min={0} max={90} defaultValue={voiceDays} />
+                  </Field>
+                </div>
+                <Button type="submit" variant="outline" size="sm" className="w-full">
+                  Save retention settings
+                </Button>
+              </form>
+
+              <div className="space-y-2 border-t border-line pt-3">
+                {retention.prunable.map((item) => (
+                  <div key={item.key} className="flex items-start justify-between gap-2">
+                    <p className="text-[10px] leading-relaxed text-muted">{item.label}</p>
+                    <span className="shrink-0 text-[10px] font-bold text-ink">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <form action={runRetentionAction}>
+                  <input type="hidden" name="mode" value="dry-run" />
+                  <Button type="submit" variant="outline" size="sm">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Dry run
+                  </Button>
+                </form>
+                <form action={runRetentionAction}>
+                  <input type="hidden" name="mode" value="prune" />
+                  <Button type="submit" variant="danger" size="sm">
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Prune transient
+                  </Button>
+                </form>
+              </div>
+
+              <div className="rounded-xl bg-ink p-3 text-paper">
+                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-coral">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  The rule
+                </p>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-paper/50">
+                  Business records — posts, approvals, reports, audit — are never wiped monthly.
+                  Transient data is pruned; old time-series data is archived first. Destructive actions
+                  show a dry run and require confirmation.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Workspace" description="Switch between the brands you manage." />
+            <div className="divide-y divide-line/70">
+              {brands.map((item) => (
+                <div key={item.id} className="flex items-center gap-2.5 px-5 py-3">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-semibold text-ink">{item.name}</p>
+                    <p className="truncate text-[9px] text-muted">{item.handle} · {item.timezone}</p>
+                  </div>
+                  {item.id === brand.id ? <Badge tone="teal">Active</Badge> : <span className="text-[9px] text-muted">—</span>}
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-line bg-cream/30 px-5 py-3">
+              <p className="flex items-center gap-1.5 text-[10px] text-muted">
+                <Sparkles className="h-3 w-3 text-coral" />
+                The notebook can be ingested later; it is not a dependency.
+              </p>
+            </div>
+          </Card>
+
+          <Link
+            href="/knowledge"
+            className="flex items-center justify-between rounded-2xl border border-dashed border-line bg-cream/30 px-4 py-3 text-[11px] font-semibold text-muted hover:text-ink"
+          >
+            <span className="flex items-center gap-2">
+              <Wifi className="h-3.5 w-3.5" />
+              Add the client’s newer information
+            </span>
+            <span>Open inbox →</span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

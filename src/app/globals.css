@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #111318;
+  --color-ink-soft: #1b1d22;
+  --color-paper: #f7f5f0;
+  --color-cream: #efeae0;
+  --color-line: #e2ddd2;
+  --color-coral: #ff5a36;
+  --color-coral-soft: #ffe7df;
+  --color-teal: #0fa3a3;
+  --color-teal-soft: #dff4f1;
+  --color-gold: #c98b3c;
+  --color-gold-soft: #f8ecd9;
+  --color-muted: #6b665c;
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--color-coral);
+    color: white;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+  textarea {
+    resize: vertical;
+  }
+}
+
+@layer utilities {
+  .display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  .eyebrow {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(17, 19, 24, 0.12) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .fade-up {
+    animation: fade-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .fade-in {
+    animation: fade-in 0.35s ease-out both;
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #efeae0 25%, #f7f5f0 50%, #efeae0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
