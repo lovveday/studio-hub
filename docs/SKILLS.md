@@ -96,5 +96,6 @@ These encode Studio Hub’s own rules and take priority for product-specific wor
 - `~/.agents/skills` contains `design-taste-frontend`.
 - `.dsh/skills` contains the 5 project skills.
 - All appear in the live catalog (the system reminder in this session lists them).
-- `ui-ux-pro-max/scripts/search.py` runs successfully with the workspace Python.
+- `ui-ux-pro-max/scripts/search.py` runs successfully with the workspace Python. Its `SKILL.md` path was adjusted from `${CLAUDE_PLUGIN_ROOT}/...` to `<skill-base-dir>/scripts/search.py` so it resolves correctly inside DSH.
+- `design-taste-frontend` lives in `~/.agents/skills`; DSH reads that directory too.
 - `npm run typecheck` and `npm run build` still pass.
