@@ -81,7 +81,7 @@ export default async function SettingsPage({
         eyebrow={`${brand.name} · workspace settings`}
         title="Settings"
         description="Brand voice, channels, the team, AI keys and the data lifecycle. This is the part that keeps the hub honest."
-        actions={<Badge tone={ai.configured ? "teal" : "gold"}>{ai.configured ? "Gemini connected" : "Demo AI"}</Badge>}
+        actions={<Badge tone={ai.configured ? "teal" : "gold"}>{ai.label}</Badge>}
       />
 
       {params.saved ? <Notice tone="success">Settings saved.</Notice> : null}

@@ -32,6 +32,7 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import { platformMeta } from "@/lib/platforms";
 import { PostVariantTabs } from "@/components/post-variant-tabs";
 import { CopyButton } from "@/components/copy-button";
+import { DictateButton } from "@/components/dictate-button";
 import {
   approvePostAction,
   createShareLinkAction,
@@ -254,9 +255,12 @@ export default async function PostDetailPage({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="idea" className="text-xs font-semibold text-ink/80">
-                  Brief / angle
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="idea" className="text-xs font-semibold text-ink/80">
+                    Brief / angle
+                  </label>
+                  <DictateButton targetId="idea" />
+                </div>
                 <textarea
                   id="idea"
                   name="idea"

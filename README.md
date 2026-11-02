@@ -49,6 +49,8 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 - Regenerate variants, edit every variant in place, save.
 - Approve, schedule, build an assisted post kit, mark posted, create a client approval link.
 - Assisted kit: copy caption, copy first comment, open the platform composer deep link.
+- Dictation button on the brief: browser speech recognition appends to the textarea (Chrome/Edge), with a voice-note fallback in Knowledge.
+- Text generation falls back to DeepSeek (OpenAI-compatible) when a Gemini key is absent; transcription and image reading still need Gemini.
 
 ### Calendar
 - Month grid with Mon–Sun weeks, previous/next/today navigation.
@@ -115,6 +117,7 @@ Copy `.env.example` to `.env.local`. Only `GEMINI_API_KEY` changes the writing/t
 - Binary doc parsing (PDF/DOCX/HTML) works server-side; image OCR needs a Gemini key. Scanned PDFs without a text layer need OCR later.
 - No S3 yet: media and reports are stored under `storage/` locally.
 - No email/push delivery yet; reminders are in-app notifications from the worker.
+- Browser dictation depends on the Web Speech API (best in Chrome/Edge); the server-side whisper pipeline and voice commands are the next voice slice.
 - No embeddings/pgvector yet: retrieval is keyword overlap over approved sources. This is deliberate for the SQLite slice; the interface is ready for a vector store.
 - The NotebookLM export is optional and not present in the repo. Upload it into the Knowledge Inbox when convenient.
 

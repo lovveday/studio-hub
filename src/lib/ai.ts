@@ -2,18 +2,37 @@ import type { BrandFact, BrandProfile, FactCandidate, PlatformVariantDraft } fro
 import { platformMeta } from "./platforms";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+const DEEPSEEK_BASE = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export function aiKey(): string {
   return process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 }
 
+export function deepseekKey(): string {
+  return process.env.DEEPSEEK_API_KEY || "";
+}
+
 export function aiStatus() {
-  const configured = Boolean(aiKey());
+  const gemini = Boolean(aiKey());
+  const deepseek = Boolean(deepseekKey());
+  if (gemini) {
+    return { configured: true, mode: "gemini" as const, model: MODEL, label: "Gemini connected" };
+  }
+  if (deepseek) {
+    return {
+      configured: true,
+      mode: "deepseek" as const,
+      model: DEEPSEEK_MODEL,
+      label: "DeepSeek connected",
+    };
+  }
   return {
-    configured,
-    mode: configured ? ("gemini" as const) : ("mock" as const),
-    model: configured ? MODEL : "demo templates",
+    configured: false,
+    mode: "mock" as const,
+    model: "demo templates",
+    label: "Demo AI mode",
   };
 }
 
@@ -46,6 +65,53 @@ async function callGemini(parts: Part[], options?: { json?: boolean; temperature
   return text;
 }
 
+async function callDeepSeek(parts: Part[], options?: { json?: boolean; temperature?: number }) {
+  const key = deepseekKey();
+  if (!key) throw new Error("No DeepSeek API key configured.");
+  const text = parts
+    .filter((part): part is { text: string } => "text" in part)
+    .map((part) => part.text)
+    .join("\n");
+  if (!text) throw new Error("DeepSeek cannot read audio or images in this build.");
+  const response = await fetch(`${DEEPSEEK_BASE}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages: [{ role: "user", content: text }],
+      temperature: options?.temperature ?? 0.7,
+      ...(options?.json ? { response_format: { type: "json_object" } } : {}),
+    }),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`DeepSeek ${response.status}: ${body.slice(0, 400)}`);
+  }
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = data.choices?.[0]?.message?.content ?? "";
+  if (!content) throw new Error("DeepSeek returned an empty response.");
+  return content;
+}
+
+async function callModel(parts: Part[], options?: { json?: boolean; temperature?: number }) {
+  if (aiKey()) {
+    try {
+      return await callGemini(parts, options);
+    } catch (error) {
+      if (!deepseekKey()) throw error;
+      console.warn("[ai] Gemini failed, falling back to DeepSeek:", (error as Error).message);
+    }
+  }
+  if (deepseekKey()) return callDeepSeek(parts, options);
+  throw new Error("No AI key configured.");
+}
+
 function parseJson<T>(text: string): T {
   const cleaned = text
     .replace(/^```(?:json)?/i, "")
@@ -61,7 +127,7 @@ function parseJson<T>(text: string): T {
 
 export async function generateText(prompt: string, temperature = 0.7): Promise<string> {
   try {
-    return await callGemini([{ text: prompt }], { temperature });
+    return await callModel([{ text: prompt }], { temperature });
   } catch (error) {
     console.warn("[ai] generateText fallback:", (error as Error).message);
     return "";
@@ -70,7 +136,7 @@ export async function generateText(prompt: string, temperature = 0.7): Promise<s
 
 export async function generateJson<T>(prompt: string, fallback: T): Promise<T> {
   try {
-    const text = await callGemini([{ text: prompt }], { json: true, temperature: 0.55 });
+    const text = await callModel([{ text: prompt }], { json: true, temperature: 0.55 });
     return parseJson<T>(text);
   } catch (error) {
     console.warn("[ai] generateJson fallback:", (error as Error).message);
@@ -299,7 +365,7 @@ Rules:
 - No markdown fences, no commentary outside JSON.`;
 
   try {
-    const result = await callGemini([{ text: prompt }], { json: true, temperature: 0.65 });
+    const result = await callModel([{ text: prompt }], { json: true, temperature: 0.65 });
     const parsed = parseJson<{
       variants: Array<{
         platform: string;
@@ -433,7 +499,7 @@ Return strict JSON:
 Only include facts that a social media manager should rely on: prices, offers, dates, product names, audience, tone rules, banned claims, contacts, CTAs. Max 6 facts. No markdown.`;
 
   try {
-    const result = await callGemini([{ text: prompt }], { json: true, temperature: 0.2 });
+    const result = await callModel([{ text: prompt }], { json: true, temperature: 0.2 });
     const parsed = parseJson<{ summary: string; facts: FactCandidate[] }>(result);
     return {
       summary: parsed.summary || fallback.summary,
@@ -474,7 +540,7 @@ Comment from ${input.author} (${input.sentiment}): "${input.comment}"
 Return only the reply text, no quotes.`;
 
   try {
-    const reply = await callGemini([{ text: prompt }], { temperature: 0.6 });
+    const reply = await callModel([{ text: prompt }], { temperature: 0.6 });
     return { reply: reply.trim().slice(0, 500), mode: "gemini" };
   } catch (error) {
     console.warn("[ai] draftReply fallback:", (error as Error).message);

@@ -6,6 +6,7 @@ import { getBrandProfile, listFacts, listPosts } from "@/lib/data";
 import { aiStatus } from "@/lib/ai";
 import { PLATFORM_ORDER, platformMeta } from "@/lib/platforms";
 import { createPostAction } from "@/app/actions/posts";
+import { DictateButton } from "@/components/dictate-button";
 import {
   Badge,
   Button,
@@ -75,18 +76,24 @@ export default async function ComposerPage({
               <Input id="title" name="title" placeholder="e.g. The 3-step night routine" required />
             </Field>
 
-            <Field
-              label="The idea / angle"
-              htmlFor="idea"
-              hint="What should the audience take away? Any proof, offer, date or CTA?"
-            >
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="idea" className="text-xs font-semibold text-ink/80">
+                  The idea / angle
+                </label>
+                <DictateButton targetId="idea" />
+              </div>
               <Textarea
                 id="idea"
                 name="idea"
                 rows={5}
                 placeholder="A calm, saveable carousel about doing less: cleanse, serum, seal. No fear-mongering. Push the saved-post CTA."
               />
-            </Field>
+              <p className="text-[11px] leading-relaxed text-muted">
+                What should the audience take away? Any proof, offer, date or CTA? Use dictation if you
+                do not want to type.
+              </p>
+            </div>
 
             <div>
               <div className="mb-2 flex items-center justify-between">

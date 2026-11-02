@@ -54,7 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 className={`h-1.5 w-1.5 rounded-full ${ai.configured ? "bg-teal" : "bg-gold"}`}
               />
               <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-paper/60">
-                {ai.configured ? "Gemini connected" : "Demo AI mode"}
+                {ai.label}
               </p>
             </div>
             <p className="mt-1.5 text-[10px] leading-relaxed text-paper/35">
