@@ -25,7 +25,7 @@ export default async function ApprovalPage({
   const post = get<Post>("SELECT * FROM posts WHERE share_token = ?", [token]);
   if (!post) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-paper px-5">
+      <main className="flex min-h-dvh items-center justify-center bg-paper px-5">
         <Card className="max-w-md p-8 text-center">
           <Sparkles className="mx-auto h-6 w-6 text-coral" />
           <h1 className="display mt-4 text-2xl text-ink">This link is not valid.</h1>
@@ -45,7 +45,7 @@ export default async function ApprovalPage({
   const done = query.done;
 
   return (
-    <main className="min-h-screen bg-paper px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-dvh bg-paper px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl space-y-5">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-sm font-black text-white">
@@ -64,7 +64,7 @@ export default async function ApprovalPage({
         <Card className="overflow-hidden">
           <div className="bg-ink px-6 py-7 text-paper sm:px-8">
             <p className="eyebrow text-coral">{brand?.name ?? "Client"} · approval request</p>
-            <h1 className="display mt-3 text-[32px] leading-tight sm:text-[40px]">{post.title}</h1>
+            <h1 className="display mt-3 text-balance text-[32px] leading-tight sm:text-[40px]">{post.title}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-paper/55">
               {post.idea || "No brief attached."}
             </p>

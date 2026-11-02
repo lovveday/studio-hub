@@ -25,8 +25,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ai = aiStatus();
 
   return (
-    <div className="min-h-screen bg-paper lg:grid lg:grid-cols-[238px_1fr]">
-      <aside className="sticky top-0 hidden h-screen flex-col bg-ink px-3 py-4 text-paper lg:flex">
+    <div className="min-h-dvh bg-paper lg:grid lg:grid-cols-[238px_1fr]">
+      <aside className="sticky top-0 hidden h-dvh flex-col bg-ink px-3 py-4 text-paper lg:flex">
         <Link href="/dashboard" className="flex items-center gap-2.5 px-2 pb-6">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-coral text-[13px] font-black text-white">
             S
@@ -74,7 +74,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <button
                 type="submit"
                 title="Sign out"
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-paper/40 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Sign out"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-paper/40 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <LogOut className="h-3.5 w-3.5" />
               </button>

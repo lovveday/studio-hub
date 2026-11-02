@@ -142,6 +142,7 @@ export default async function ReportsPage({
                         type="submit"
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-white text-muted hover:bg-red-50 hover:text-red-600"
                         title="Delete report"
+                        aria-label="Delete report"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

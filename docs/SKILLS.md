@@ -1,73 +1,100 @@
-# Agent skills to install before the next build slice
+# Agent skills — installed
 
-DSH loads skills from these folders (highest priority first):
+This file replaces the earlier “to install” list. Everything below is installed and visible in the DSH skill catalog now.
 
-1. `<repo>/.dsh/skills/<name>/SKILL.md` — project-scoped
-2. `<repo>/.agents/skills/<name>/SKILL.md`
-3. `C:\Users\23481\.dsh\skills\<name>/SKILL.md` — global
-4. `C:\Users\23481\.agents\skills\<name>/SKILL.md`
+## Where they live
 
-Each skill is **one folder with `SKILL.md` at its root**. No nesting. The frontmatter needs a `description`; that is what the model sees in the catalog.
+- `C:\Users\23481\.dsh\skills\<name>\SKILL.md` — global
+- `C:\Users\23481\.agents\skills\<name>\SKILL.md` — shared with other agents (DSH reads it)
+- `<repo>\.dsh\skills\<name>\SKILL.md` — project-scoped
 
-After installing, restart/reload the DSH profile and start a new session. The catalog is read at session start.
+DSH reads the catalog at session start, but the running session picked up the new skills without a restart.
 
-## 1. Frontend taste & UI craft
+## Installed external skills (37)
 
-| Skill | Why | Install |
+### Frontend taste, design and UI craft
+
+| Skill | Source | Notes |
 |---|---|---|
-| **taste-skill** (`design-taste-frontend`) | Premium layout, type, spacing, motion; stops generic AI UI. Use `minimalist` or `soft` for dashboards. | `npx skills add https://github.com/Leonxlnx/taste-skill` then make sure the folder lands in `~/.dsh/skills/` |
-| **frontend-design** | Distinctive visual direction for React/Tailwind. | Copy `skills/frontend-design` from `anthropics/skills` |
-| **ui-ux-pro-max** | Styles, palettes, font pairings, UX rules. | Clone `nextlevelbuilder/ui-ux-pro-max-skill`, copy the folder with `SKILL.md` to `~/.dsh/skills/ui-ux-pro-max/` |
-| **web-design-guidelines** | Accessibility/UX audit before shipping. | Copy `skills/web-design-guidelines` from `anthropics/skills` |
-| **ui-styling** | shadcn/ui + Radix + Tailwind, dark mode, responsive. | Copy `skills/ui-styling` from `anthropics/skills` |
-| **design-system** | Token architecture and component specs. | Copy `skills/design-system` from `anthropics/skills` |
-| **theme-factory** | Themes for the app and report decks. | Copy `skills/theme-factory` from `anthropics/skills` |
-| **impeccable** | End-to-end UI critique/polish. | Copy if present in `anthropics/skills`; otherwise use `web-design-guidelines` + taste |
+| `design-taste-frontend` | `Leonxlnx/taste-skill` via `npx skills add ... -g --all --copy` | Installed at `~/.agents/skills`; taste/anti-slop direction |
+| `frontend-design` | `anthropics/skills` | Distinctive UI direction |
+| `ui-ux-pro-max` | `nextlevelbuilder/ui-ux-pro-max-skill` (sparse clone) | Full skill: data, references, search scripts |
+| `ui-styling` | `mrgoonie/claudekit-skills` (sparse clone) | Full skill incl. references/scripts/fonts |
+| `design-system` | `Tyler-R-Kendrick/agent-skills` | Token architecture and design-system process |
+| `baseline-ui` | `ui-skills` npm package 0.2.4 | Deslop/polish constraints |
+| `improve-ui` | `ui-skills` npm package | Read-only design audit and handoff plans |
+| `ui-skills-root` | `ui-skills` npm package | Router for the UI skill set |
+| `fixing-accessibility` | `ui-skills` npm package | WCAG fixes |
+| `fixing-metadata` | `ui-skills` npm package | Titles, OG, canonical, JSON-LD |
+| `fixing-motion-performance` | `ui-skills` npm package | Jank and compositor fixes |
+| `web-design-guidelines` | `vercel-labs/agent-skills` | Web Interface Guidelines audit |
+| `impeccable` | `pbakaus/impeccable` (sparse clone) | Full skill: references, agents, scripts |
+| `brand-guidelines` | `anthropics/skills` | Brand application |
+| `theme-factory` | `anthropics/skills` | Themes for UI and report decks |
+| `web-artifacts-builder` | `anthropics/skills` | Complex React/Tailwind artifacts |
 
-Quick install for the Anthropic set:
+### React / Next.js engineering
 
-```powershell
-git clone https://github.com/anthropics/skills $env:TEMP\anthropic-skills
-$dest = "$env:USERPROFILE\.dsh\skills"
-New-Item -ItemType Directory -Force $dest | Out-Null
-foreach ($name in @("frontend-design","web-design-guidelines","ui-styling","design-system","theme-factory","brand","react-best-practices","composition-patterns","react-view-transitions","webapp-testing","slides")) {
-  Copy-Item -Recurse "$env:TEMP\anthropic-skills\skills\$name" "$dest\$name"
-}
-```
-
-## 2. Build quality
-
-| Skill / plugin | Why | Install |
-|---|---|---|
-| **superpowers-dsh** (plugin) | TDD, writing plans, systematic debugging, code review, verification before completion. | `npx @deepseek-ai/dsh plugin --profile desktop add github:StartOver000/SuperPower-dsh` then restart |
-| **webapp-testing** | Playwright UI verification. | Included in the Anthropic set above |
-| **react-best-practices** | Next.js/React performance. | Included above |
-| **composition-patterns** | Scalable React composition. | Included above |
-| **react-view-transitions** | Native-feeling transitions. | Included above |
-
-> The active DSH profile is **desktop**, not `web`. Use `--profile desktop`.
-
-## 3. Project skills already in this repo
-
-These are authored for this hub and live in `.dsh/skills/`:
-
-| Skill | What it encodes |
+| Skill | Source |
 |---|---|
-| `social-platform-apis` | Capability matrix, limits, OAuth scopes, assisted-mode boundaries |
-| `knowledge-inbox` | WhatsApp/Opus formats, ingestion pipeline, fact review |
-| `brand-voice-rag` | Brand context, citations, guardrails, prompt rules |
-| `data-lifecycle` | Retention, archival, partitioning, quotas |
-| `design-system-hub` | The app’s tokens, components, editorial dashboard style |
+| `vercel-react-best-practices` | `vercel-labs/agent-skills` |
+| `vercel-composition-patterns` | `vercel-labs/agent-skills` |
+| `vercel-react-view-transitions` | `vercel-labs/agent-skills` |
 
-## 4. Optional, later
+### Build discipline (Superpowers for DSH)
 
-- **office-pptx / office-export-pdf / office-render** — already available in this session; use for inspecting generated report decks.
-- **slides** — design language for report templates.
-- **brand** — brand voice and visual identity frameworks; useful for the Brand Brain schema.
+Installed from `StartOver000/SuperPower-dsh` — 15 DSH-adapted skills. The plugin/CLI install hung, so the skills were copied directly into `~/.dsh/skills`. They work as normal skills; the plugin bootstrap is not required.
 
-## Verify
+`brainstorming` · `writing-plans` · `executing-plans` · `subagent-driven-development` · `dispatching-parallel-agents` · `systematic-debugging` · `test-driven-development` · `verification-before-completion` · `requesting-code-review` · `receiving-code-review` · `finishing-a-development-branch` · `using-git-worktrees` · `using-superpowers` · `writing-skills` · `diagnosing-superpowers`
 
-1. Restart the app/profile.
-2. Start a new session.
-3. Ask: “Which skills are available?” The catalog should list the new ones.
-4. If a skill does not appear, check that `SKILL.md` is directly inside `~/.dsh/skills/<name>/` (not one folder deeper) and that the frontmatter has a `description`.
+### Utility
+
+| Skill | Source |
+|---|---|
+| `webapp-testing` | `anthropics/skills` — Playwright UI verification |
+| `skill-creator` | `anthropics/skills` — author/optimize skills |
+| `writing-guidelines` | `vercel-labs/agent-skills` — docs/prose audit |
+
+## Project skills (already in the repo)
+
+These encode Studio Hub’s own rules and take priority for product-specific work:
+
+- `social-platform-apis`
+- `knowledge-inbox`
+- `brand-voice-rag`
+- `data-lifecycle`
+- `design-system-hub`
+
+## Already built into DSH (no install)
+
+`office`, `office-docx`, `office-xlsx`, `office-pptx`, `office-export-pdf`, `office-recalculate`, `office-render`, `diagnose-windows-sandbox-acl`.
+
+## Not installed, and why
+
+- **`slides`** — not present in the current `anthropics/skills` repo. The report deck uses `office-pptx` + `theme-factory` instead.
+- **`ui-ux-pro-max` via `npx skills add`** — the GitHub clone repeatedly failed with `early EOF`. A sparse clone succeeded and the full skill (SKILL.md + data + references + scripts) is installed.
+- **`superpowers-dsh` as a plugin** — `npx @deepseek-ai/dsh plugin --profile desktop add ...` hung for hours and never modified the profile. The 15 skills were copied instead; no profile changes were made.
+- **`npx ui-skills`** — this is an interactive router CLI, not an installer. It hung on this machine. Its shipped skill folders were extracted from the npm tarball and installed directly.
+
+## How to use them in this repo
+
+| Task | Load |
+|---|---|
+| Any new UI or redesign | `design-taste-frontend`, `frontend-design`, `ui-ux-pro-max`, `baseline-ui` |
+| Audit/polish an existing screen | `baseline-ui`, `web-design-guidelines`, `improve-ui`, `fixing-accessibility` |
+| React/Next.js performance or refactor | `vercel-react-best-practices`, `vercel-composition-patterns` |
+| Page/route transitions | `vercel-react-view-transitions`, `fixing-motion-performance` |
+| Build a feature with tests | `brainstorming`, `writing-plans`, `test-driven-development`, `verification-before-completion` |
+| Diagnose a bug | `systematic-debugging` |
+| Review before merge | `requesting-code-review`, `receiving-code-review` |
+| Report deck design | `theme-factory`, `office-pptx` |
+| Product-specific behaviour | the five project skills above |
+
+## Verification
+
+- `~/.dsh/skills` contains 36 skill folders.
+- `~/.agents/skills` contains `design-taste-frontend`.
+- `.dsh/skills` contains the 5 project skills.
+- All appear in the live catalog (the system reminder in this session lists them).
+- `ui-ux-pro-max/scripts/search.py` runs successfully with the workspace Python.
+- `npm run typecheck` and `npm run build` still pass.

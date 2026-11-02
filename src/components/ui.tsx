@@ -63,7 +63,7 @@ export function buttonClasses(
   className?: string
 ) {
   return cn(
-    "inline-flex items-center justify-center font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/40",
+    "inline-flex cursor-pointer items-center justify-center font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/40",
     buttonVariants[variant],
     buttonSizes[size],
     className
@@ -293,7 +293,7 @@ export function PageHeader({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow ? <p className="eyebrow mb-2 text-coral">{eyebrow}</p> : null}
-        <h1 className="display text-[30px] leading-[1.05] text-ink sm:text-[36px]">{title}</h1>
+        <h1 className="display text-balance text-[30px] leading-[1.05] text-ink sm:text-[36px]">{title}</h1>
         {description ? (
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{description}</p>
         ) : null}
@@ -368,7 +368,7 @@ export function MetricCard({
     <Card className="relative overflow-hidden p-4">
       <span className={cn("absolute left-0 top-0 h-full w-1", accents[tone])} />
       <p className="eyebrow text-muted">{label}</p>
-      <p className="display mt-2 text-[28px] leading-none text-ink">{value}</p>
+      <p className="display mt-2 text-[28px] leading-none tabular-nums text-ink">{value}</p>
       {detail ? <p className="mt-2 text-[11px] leading-relaxed text-muted">{detail}</p> : null}
     </Card>
   );

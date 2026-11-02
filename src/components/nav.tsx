@@ -39,6 +39,7 @@ export function NavLinks({ mobile = false }: { mobile?: boolean }) {
           <Link
             key={item.href}
             href={item.href}
+            aria-current={active ? "page" : undefined}
             className={cn(
               "group flex items-center gap-2.5 rounded-xl text-[13px] font-medium transition-colors",
               mobile ? "shrink-0 px-3 py-2" : "px-3 py-2.5",

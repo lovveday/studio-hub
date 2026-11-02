@@ -17,7 +17,7 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <main className="grid min-h-screen bg-paper lg:grid-cols-[1.05fr_0.95fr]">
+    <main className="grid min-h-dvh bg-paper lg:grid-cols-[1.05fr_0.95fr]">
       <section className="relative hidden overflow-hidden bg-ink p-10 text-paper lg:flex lg:flex-col lg:justify-between">
         <div className="absolute inset-0 dot-grid opacity-[0.06]" />
         <div className="relative">
@@ -33,7 +33,7 @@ export default async function LoginPage({
 
           <div className="mt-24 max-w-xl">
             <p className="eyebrow text-coral">Less tab-switching. More signal.</p>
-            <h1 className="display mt-5 text-[54px] leading-[0.98] tracking-[-0.03em]">
+            <h1 className="display mt-5 text-balance text-[54px] leading-[0.98] tracking-[-0.03em]">
               Every brand.
               <br />
               Every channel.
@@ -72,7 +72,7 @@ export default async function LoginPage({
           </div>
 
           <p className="eyebrow text-coral">Welcome back</p>
-          <h2 className="display mt-2 text-[34px] leading-tight text-ink">Sign in to the studio.</h2>
+          <h2 className="display mt-2 text-balance text-[34px] leading-tight text-ink">Sign in to the studio.</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
             Your brands, calendar, knowledge inbox and reports are waiting.
           </p>

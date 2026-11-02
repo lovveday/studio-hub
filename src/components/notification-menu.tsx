@@ -13,7 +13,10 @@ export function NotificationMenu({
 }) {
   return (
     <details className="group relative">
-      <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border border-line bg-white text-ink/70 shadow-sm transition-colors hover:bg-cream/60 [&::-webkit-details-marker]:hidden">
+      <summary
+        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+        className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border border-line bg-white text-ink/70 shadow-sm transition-colors hover:bg-cream/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/40 [&::-webkit-details-marker]:hidden"
+      >
         <Bell className="h-4 w-4" />
         {unread > 0 ? (
           <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[9px] font-bold text-white">
