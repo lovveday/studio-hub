@@ -246,6 +246,9 @@ function migrate(db: SqliteDb) {
       alt_text TEXT NOT NULL DEFAULT '',
       tags TEXT NOT NULL DEFAULT '',
       checksum TEXT NOT NULL DEFAULT '',
+      storage_provider TEXT NOT NULL DEFAULT 'local',
+      upload_status TEXT NOT NULL DEFAULT 'ready',
+      upload_id TEXT,
       created_by TEXT,
       created_at TEXT NOT NULL
     );
@@ -305,6 +308,15 @@ function migrate(db: SqliteDb) {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS deletion_requests (
+      id TEXT PRIMARY KEY,
+      platform TEXT NOT NULL DEFAULT 'meta',
+      external_user_id TEXT,
+      confirmation_code TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'received',
+      created_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_posts_brand_date ON posts(brand_id, scheduled_at);
     CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
     CREATE INDEX IF NOT EXISTS idx_knowledge_brand ON knowledge_items(brand_id, created_at);
@@ -316,6 +328,18 @@ function migrate(db: SqliteDb) {
     CREATE INDEX IF NOT EXISTS idx_publish_attempts_post ON publish_attempts(post_id, platform);
     CREATE INDEX IF NOT EXISTS idx_oauth_states_expiry ON oauth_states(expires_at);
   `);
+
+  // Non-destructive upgrades for databases created before media uploads existed.
+  addColumnIfMissing(db, "assets", "storage_provider", "TEXT NOT NULL DEFAULT 'local'");
+  addColumnIfMissing(db, "assets", "upload_status", "TEXT NOT NULL DEFAULT 'ready'");
+  addColumnIfMissing(db, "assets", "upload_id", "TEXT");
+}
+
+function addColumnIfMissing(db: SqliteDb, table: string, column: string, definition: string) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name?: string }>;
+  if (!columns.some((row) => row.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }
 
 function seed(db: SqliteDb) {

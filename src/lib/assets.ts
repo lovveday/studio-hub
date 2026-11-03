@@ -14,8 +14,13 @@ export function kindForMime(mime: string): AssetKind {
   return "file";
 }
 
-export function assetUrl(relativePath: string): string {
-  const relative = relativePath.replace(/\\/g, "/").replace(/^storage\//, "");
+export function assetUrl(relativePath: string, provider: "local" | "r2" = "local"): string {
+  const normalized = relativePath.replace(/\\/g, "/");
+  if (provider === "r2") {
+    const base = (process.env.R2_PUBLIC_BASE_URL || "").replace(/\/$/, "");
+    return base ? `${base}/${normalized}` : "#r2-public-url-missing";
+  }
+  const relative = normalized.replace(/^storage\//, "");
   return `/api/files/${relative}`;
 }
 

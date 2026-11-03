@@ -1,0 +1,41 @@
+services:
+  app:
+    build: .
+    env_file:
+      - .env.local
+    expose:
+      - "3000"
+    volumes:
+      - ./data:/app/data
+      - ./storage:/app/storage
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["npm", "run", "worker"]
+    env_file:
+      - .env.local
+    volumes:
+      - ./data:/app/data
+      - ./storage:/app/storage
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file:
+      - .env.local
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,6 +1,7 @@
 import { get } from "@/lib/db";
 import { aiStatus } from "@/lib/ai";
 import { oauthProviderConfigured } from "@/lib/oauth";
+import { r2Configured } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,11 @@ export async function GET() {
       linkedin: oauthProviderConfigured("linkedin"),
       x: oauthProviderConfigured("x"),
       tiktok: oauthProviderConfigured("tiktok"),
+    },
+    storage: {
+      r2: r2Configured(),
+      maxUploadMb: 300,
+      publicR2Base: Boolean(process.env.R2_PUBLIC_BASE_URL),
     },
     counts,
   });

@@ -36,7 +36,7 @@ import { platformMeta } from "@/lib/platforms";
 import { PostVariantTabs } from "@/components/post-variant-tabs";
 import { CopyButton } from "@/components/copy-button";
 import { DictateButton } from "@/components/dictate-button";
-import { AssetUploader } from "@/components/asset-uploader";
+import { LargeAssetUploader } from "@/components/large-asset-uploader";
 import {
   approvePostAction,
   createShareLinkAction,
@@ -321,7 +321,7 @@ export default async function PostDetailPage({
               action={<Badge tone="neutral">{media.length}</Badge>}
             />
             <div className="space-y-4 p-5">
-              <AssetUploader postId={post.id} />
+              <LargeAssetUploader postId={post.id} />
               {media.length === 0 ? (
                 <p className="text-[11px] leading-relaxed text-muted">
                   No media attached yet. The assisted kit will tell you what size each platform needs.
@@ -329,7 +329,7 @@ export default async function PostDetailPage({
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {media.map(({ id: mediaId, asset }) => {
-                    const url = assetUrl(asset.file_path);
+                    const url = assetUrl(asset.file_path, asset.storage_provider);
                     return (
                       <div key={mediaId} className="overflow-hidden rounded-xl border border-line bg-white">
                         <div className="flex aspect-video items-center justify-center bg-cream/50">
@@ -337,8 +337,15 @@ export default async function PostDetailPage({
                             <img src={url} alt={asset.alt_text || asset.name} className="h-full w-full object-cover" />
                           ) : asset.kind === "video" ? (
                             <video src={url} controls preload="metadata" className="h-full w-full object-cover" />
-                          ) : (
+                          ) : asset.kind === "audio" ? (
                             <audio src={url} controls className="w-full px-4" />
+                          ) : (
+                            <div className="px-4 text-center">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
+                                File
+                              </p>
+                              <p className="mt-1 text-[11px] text-ink/70">Use the download link below.</p>
+                            </div>
                           )}
                         </div>
                         <div className="flex items-start gap-2 p-2.5">

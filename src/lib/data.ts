@@ -599,15 +599,19 @@ export function listPostAssets(postId: string): Array<{ id: string; position: nu
     alt_text: string;
     tags: string;
     checksum: string;
+    storage_provider: "local" | "r2";
+    upload_status: "uploading" | "ready" | "failed";
+    upload_id: string | null;
     created_by: string | null;
     created_at: string;
   }>(
     `SELECT pm.id, pm.position,
             a.id AS asset_id, a.brand_id, a.name, a.file_path, a.mime_type, a.size, a.kind,
-            a.width, a.height, a.duration_seconds, a.alt_text, a.tags, a.checksum, a.created_by, a.created_at
+            a.width, a.height, a.duration_seconds, a.alt_text, a.tags, a.checksum,
+            a.storage_provider, a.upload_status, a.upload_id, a.created_by, a.created_at
      FROM post_media pm
      JOIN assets a ON a.id = pm.asset_id
-     WHERE pm.post_id = ?
+     WHERE pm.post_id = ? AND a.upload_status = 'ready'
      ORDER BY pm.position ASC`,
     [postId]
   ).map((row) => ({
@@ -627,6 +631,9 @@ export function listPostAssets(postId: string): Array<{ id: string; position: nu
       alt_text: row.alt_text,
       tags: row.tags,
       checksum: row.checksum,
+      storage_provider: row.storage_provider,
+      upload_status: row.upload_status,
+      upload_id: row.upload_id,
       created_by: row.created_by,
       created_at: row.created_at,
     },

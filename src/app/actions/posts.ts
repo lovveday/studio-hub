@@ -10,6 +10,7 @@ import { generateVariants } from "@/lib/ai";
 import { getBrand, getBrandProfile, getPost, getPostVariants, listFacts, logActivity } from "@/lib/data";
 import { retrieveContext } from "@/lib/knowledge";
 import { removeAssetFile } from "@/lib/assets";
+import { deleteObject } from "@/lib/storage";
 import { publishPost } from "@/lib/publishers";
 import type { Platform } from "@/lib/platforms";
 
@@ -333,8 +334,8 @@ export async function removePostAssetAction(formData: FormData) {
   const mediaId = String(formData.get("mediaId") ?? "");
   const post = getPost(postId);
   if (!post || post.brand_id !== brand.id) redirect("/calendar");
-  const row = get<{ asset_id: string; file_path: string }>(
-    `SELECT pm.asset_id, a.file_path
+  const row = get<{ asset_id: string; file_path: string; storage_provider: "local" | "r2" }>(
+    `SELECT pm.asset_id, a.file_path, a.storage_provider
      FROM post_media pm JOIN assets a ON a.id = pm.asset_id
      WHERE pm.id = ? AND pm.post_id = ?`,
     [mediaId, postId]
@@ -346,7 +347,8 @@ export async function removePostAssetAction(formData: FormData) {
   ]);
   if (Number(stillUsed?.c ?? 0) === 0) {
     run("DELETE FROM assets WHERE id = ?", [row.asset_id]);
-    removeAssetFile(row.file_path);
+    if (row.storage_provider === "r2") await deleteObject(row.file_path);
+    else removeAssetFile(row.file_path);
   }
   logActivity({
     brandId: brand.id,

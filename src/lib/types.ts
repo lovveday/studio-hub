@@ -194,6 +194,9 @@ export type AssetRow = {
   alt_text: string;
   tags: string;
   checksum: string;
+  storage_provider: "local" | "r2";
+  upload_status: "uploading" | "ready" | "failed";
+  upload_id: string | null;
   created_by: string | null;
   created_at: string;
 };

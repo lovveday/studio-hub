@@ -29,6 +29,7 @@ import {
 import { aiStatus } from "@/lib/ai";
 import { isEncryptionConfigured } from "@/lib/crypto";
 import { oauthProviderConfigured, type OAuthPlatform } from "@/lib/oauth";
+import { r2Configured } from "@/lib/storage";
 import { PLATFORM_ORDER, platformMeta } from "@/lib/platforms";
 import { fileSize, safeJson } from "@/lib/utils";
 import {
@@ -86,6 +87,8 @@ export default async function SettingsPage({
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const isLocalMeta = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
   const encryptionReady = isEncryptionConfigured();
+  const r2Ready = r2Configured();
+  const r2Public = Boolean(process.env.R2_PUBLIC_BASE_URL);
 
   function providerFor(platform: string): OAuthPlatform {
     if (platform === "facebook" || platform === "instagram") return "meta";
@@ -554,6 +557,50 @@ S3_ENDPOINT=...`}</pre>
                   show a dry run and require confirmation.
                 </p>
               </div>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Media storage"
+              description="300 MB direct uploads, multipart when R2 is configured."
+              action={<HardDrive className="h-4 w-4 text-muted" />}
+            />
+            <div className="space-y-3 p-5">
+              <div className="flex items-center justify-between rounded-xl bg-cream/50 px-3 py-2.5">
+                <div>
+                  <p className="text-[11px] font-semibold text-ink">
+                    {r2Ready ? "Cloudflare R2" : "Local fallback"}
+                  </p>
+                  <p className="text-[9px] text-muted">
+                    {r2Ready
+                      ? "Browser uploads directly to R2 with 16 MB multipart chunks."
+                      : "Browser uploads 8 MB chunks to this server. Add R2 for direct-to-cloud uploads."}
+                  </p>
+                </div>
+                <Badge tone={r2Ready ? "teal" : "gold"}>{r2Ready ? "R2" : "Local"}</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-line bg-white px-2.5 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted">Max file</p>
+                  <p className="mt-0.5 text-sm font-semibold text-ink">300 MB</p>
+                </div>
+                <div className="rounded-lg border border-line bg-white px-2.5 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted">Public previews</p>
+                  <p className="mt-0.5 text-sm font-semibold text-ink">{r2Public ? "Yes" : "No"}</p>
+                </div>
+              </div>
+              {!r2Ready ? (
+                <p className="text-[10px] leading-relaxed text-muted">
+                  Add <code>R2_ACCOUNT_ID</code>, <code>R2_ACCESS_KEY_ID</code>,{" "}
+                  <code>R2_SECRET_ACCESS_KEY</code> and <code>R2_BUCKET</code> to switch to direct uploads.
+                </p>
+              ) : !r2Public ? (
+                <p className="text-[10px] leading-relaxed text-amber-700">
+                  Set <code>R2_PUBLIC_BASE_URL</code> so previews and the assisted kit can read the
+                  uploaded files.
+                </p>
+              ) : null}
             </div>
           </Card>
 

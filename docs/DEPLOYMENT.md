@@ -88,6 +88,36 @@ A small always-on VPS is the path with the least rewrite:
 
 This keeps SQLite and local storage, which is fine for a small agency. Add nightly backups of `data/` and `storage/`.
 
+### VPS deployment (Docker + Caddy)
+
+The repo now includes `Dockerfile`, `docker-compose.yml` and `Caddyfile`.
+
+```bash
+# on the VPS
+git clone <your-repo> /opt/my-social-hub
+cd /opt/my-social-hub
+cp .env.example .env.local
+# edit .env.local: APP_URL, DOMAIN, APP_ENCRYPTION_KEY, keys, R2 values
+nano .env.local
+
+docker compose up -d --build
+docker compose logs -f app
+```
+
+Point your domain's A record at the VPS. Caddy obtains the TLS certificate automatically once `DOMAIN` is set.
+
+The `worker` service runs `npm run worker` with the same `data/` and `storage/` volumes. Do not scale it to multiple replicas — scheduled publishing must have one owner.
+
+Backups:
+
+```bash
+tar -czf backup-$(date +%F).tar.gz data storage
+```
+
+Copy the archive off the VPS (rclone, S3, etc.). Test a restore quarterly.
+
+See [UPLOADS.md](UPLOADS.md) for R2 bucket/CORS setup.
+
 ### If you specifically want Vercel
 
 You need a migration slice first:
@@ -109,11 +139,18 @@ This is a real migration, not a deploy button. It is doable, but it should be a 
 
 ## Before Meta App Review
 
-You will need public pages and endpoints that do not exist yet:
+The public pages and callbacks are now built:
 
-- `/privacy` — privacy policy URL
+- `/privacy` — privacy policy URL (set `SUPPORT_EMAIL`)
 - `/terms` — terms of service URL
-- `/api/meta/data-deletion` — data deletion callback returning `{ url, confirmation_code }`
+- `/data-deletion` — public explanation and request status
+- `/api/meta/data-deletion` — verifies the signed request and returns `{ url, confirmation_code }`
+- `/api/meta/deauthorize` — deauthorize callback
+
+You still need:
+
+- A stable production domain with HTTPS
+- A real `SUPPORT_EMAIL` and a legal review of the policy text
 - A stable test account for the reviewer
 - A 1080p screencast showing connect → compose → approve → publish → first comment
 
