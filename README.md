@@ -42,13 +42,23 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 - The composer and writer only use approved, current facts.
 - Seed data includes a demo WhatsApp voice note that changes a price and bans a claim — use it to test the replace flow.
 
+### Connections, assets and the publisher
+- `social_accounts` table with encrypted access/refresh tokens (`APP_ENCRYPTION_KEY`, AES-256-GCM).
+- OAuth start/callback routes for `meta`, `google`, `linkedin`, `x`, `tiktok` and a `mock` provider.
+- Settings shows real connections, reconnect/disconnect, and a **Connect demo accounts** button that creates a demo Facebook Page + Instagram account.
+- Asset library: upload images/video/audio up to 50 MB, preview them on the post, download, remove, alt text.
+- Mock publisher: `Run publisher` on a post creates per-platform publish attempts. Demo accounts publish immediately; channels without an account remain assisted tasks. The worker calls the same publisher for due posts.
+- Real adapters are deliberately gated: non-mock accounts currently create an `assisted_required` attempt with a clear message instead of pretending to publish.
+- Meta requires an HTTPS callback; set `APP_URL` to a tunnel or deployed URL. The Settings channel card shows the current callback base and warns when it is still localhost.
+
 ### Composer + post detail
 - One brief → per-platform variants for Facebook, Instagram, TikTok, X, LinkedIn and YouTube.
 - Character limits, hashtag suggestions, first comment per platform, live previews.
 - Safety check: over-limit captions, missing first comments, banned claims from the brand profile.
 - Regenerate variants, edit every variant in place, save.
-- Approve, schedule, build an assisted post kit, mark posted, create a client approval link.
+- Approve, schedule, build an assisted post kit, run the publisher, mark posted, create a client approval link.
 - Assisted kit: copy caption, copy first comment, open the platform composer deep link.
+- Creative card: upload/attach media, preview, download, remove; the publish log shows every target attempt.
 - Dictation button on the brief: browser speech recognition appends to the textarea (Chrome/Edge), with a voice-note fallback in Knowledge.
 - Text generation falls back to DeepSeek (OpenAI-compatible) when a Gemini key is absent; transcription and image reading still need Gemini.
 
@@ -108,17 +118,24 @@ WhatsApp voice notes are Opus audio in an OGG container (`.opus` / `.ogg`), typi
 
 ## Environment
 
-Copy `.env.example` to `.env.local`. Only `GEMINI_API_KEY` changes the writing/transcription behaviour; everything else is optional for this slice.
+Copy `.env.example` to `.env.local`. Never commit `.env.local` or paste real keys into `.env.example`.
+
+- `GEMINI_API_KEY` enables real writing/transcription; without it the hub uses demo templates.
+- `APP_URL` is the base for OAuth callbacks and approval links. Meta requires HTTPS, so use a tunnel or deployed URL; Google accepts localhost.
+- `APP_ENCRYPTION_KEY` is required before storing real OAuth tokens. Generate a long random value.
+- Platform app IDs/secrets are optional until you connect a real account.
+- `META_LOGIN_CONFIG_ID` is optional; when set, Meta uses the Facebook Login for Business configuration instead of a raw scope list.
 
 ## Known limits / next slice
 
-- No live OAuth or platform publishing. The next slice is Meta (Facebook Page + Instagram) first, then YouTube, LinkedIn, X, TikTok, with token refresh, idempotent retries and reconciliation.
-- Auto-like/auto-reply is modelled in the UI and data model but not executed against platforms. Instagram and LinkedIn support comment likes; YouTube does not expose a comment-like API; TikTok is partner-gated.
+- OAuth foundation and the mock publisher are built. Real Meta/YouTube/LinkedIn/X/TikTok adapters are not enabled yet; non-mock accounts produce assisted attempts. The next slice is the Meta (Facebook + Instagram) and YouTube adapters, then LinkedIn/X/TikTok.
+- Meta rejects a localhost callback. Use a tunnel (ngrok/cloudflared) or deploy first; the Settings page shows the exact callback base it will send.
+- Auto-like/auto-reply is modelled in the UI and data model but not executed against platforms. Instagram and LinkedIn support comment likes; YouTube does not expose a comment-like API; TikTok is partner-gated and its audit may reject an internal agency tool.
 - Binary doc parsing (PDF/DOCX/HTML) works server-side; image OCR needs a Gemini key. Scanned PDFs without a text layer need OCR later.
-- No S3 yet: media and reports are stored under `storage/` locally.
+- Files and media are stored under `storage/` locally. S3 migration is later.
 - No email/push delivery yet; reminders are in-app notifications from the worker.
 - Browser dictation depends on the Web Speech API (best in Chrome/Edge); the server-side whisper pipeline and voice commands are the next voice slice.
 - No embeddings/pgvector yet: retrieval is keyword overlap over approved sources. This is deliberate for the SQLite slice; the interface is ready for a vector store.
 - The NotebookLM export is optional and not present in the repo. Upload it into the Knowledge Inbox when convenient.
 
-See [docs/SKILLS.md](docs/SKILLS.md) for the agent skills to install before the next build slice.
+Platform setup: [docs/API-KEYS.md](docs/API-KEYS.md). Free alternatives: [docs/FREE-ALTERNATIVES.md](docs/FREE-ALTERNATIVES.md). Next-build queue: [docs/NEXT-BUILD.md](docs/NEXT-BUILD.md).

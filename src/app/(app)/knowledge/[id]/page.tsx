@@ -12,6 +12,7 @@ import {
 import { requireUser } from "@/lib/auth";
 import { getActiveBrand } from "@/lib/brand-context";
 import { getKnowledge, listFacts } from "@/lib/data";
+import { assetUrl } from "@/lib/assets";
 import { formatDate, relativeTime, safeJson, truncate } from "@/lib/utils";
 import type { FactCandidate } from "@/lib/types";
 import {
@@ -50,7 +51,7 @@ export default async function KnowledgeDetailPage({
   if (!item || item.brand_id !== brand.id) notFound();
   const candidates = safeJson<FactCandidate[]>(item.facts_json, []);
   const relatedFacts = listFacts(brand.id, true).filter((fact) => fact.source_item_id === item.id);
-  const fileUrl = item.file_path ? `/api/files/${item.file_path.replace(/\\/g, "/")}` : "";
+  const fileUrl = item.file_path ? assetUrl(item.file_path) : "";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 fade-up">

@@ -1,6 +1,8 @@
 # What to build next
 
-Status: the Phase 0 + Phase 1 slice is running — knowledge inbox, brand facts/versioning, composer, calendar, approvals, assisted post kits, inbox, reports (PPTX/PDF), settings and retention. Real platform publishing is the missing spine.
+Status: the Phase 0 + Phase 1 slice is running — knowledge inbox, brand facts/versioning, composer, calendar, approvals, assisted post kits, inbox, reports (PPTX/PDF), settings and retention.
+
+**Update after the first publisher slice:** items 1–3 below are now implemented — asset upload/library, encrypted social-account connections (OAuth start/callback + mock provider), and a mock publisher with per-target attempts. The real Meta/YouTube/LinkedIn/X/TikTok adapters are item 4.
 
 ## The one critical path
 
@@ -9,13 +11,13 @@ API credentials → social account connection → publish adapter → first comm
       → comment watcher → auto-reply/like rules → analytics sync → live reports
 ```
 
-Everything else can run in parallel. The publisher foundation should be built **with a mock adapter first**, so keys/approvals are not a blocker for engineering.
+Everything else can run in parallel. The publisher foundation was built **with a mock adapter first**, so keys/approvals were not a blocker for engineering.
 
 ---
 
 ## Build queue
 
-### 1. Asset library + media upload — P0, no keys needed
+### 1. Asset library + media upload — P0, no keys needed ✅ done
 Why: a post cannot really publish without a creative. The data model has `media_path`, but there is no upload UI yet.
 
 - `assets` table: brand, file, mime, dimensions, duration, size, alt text, tags, rights, checksum.
@@ -27,7 +29,7 @@ Why: a post cannot really publish without a creative. The data model has `media_
 
 Done when: a post can carry an image/video, the preview shows it, and the assisted kit downloads it.
 
-### 2. Social account connection foundation — P0, buildable now
+### 2. Social account connection foundation — P0, buildable now ✅ done (OAuth routes + mock provider)
 Why: keys are only useful once the hub can hold and refresh tokens.
 
 - `social_accounts` table: platform, external ID, page/org ID, scopes, encrypted tokens, expiry, status, capability JSON.
@@ -41,7 +43,7 @@ Why: keys are only useful once the hub can hold and refresh tokens.
 
 Done when: the Settings channel rows are real, a mock OAuth provider can connect a fake account, and tokens survive restart.
 
-### 3. Publisher adapter + job queue — P0, mock first
+### 3. Publisher adapter + job queue — P0, mock first ✅ done (mock adapter + worker)
 Why: this is the engine that turns “scheduled” into “posted”.
 
 - `SocialAdapter` contract: `validate`, `upload`, `publish`, `comment`, `reply`, `likeComment`, `listComments`, `metrics`.
@@ -163,9 +165,9 @@ Done when: weekly/monthly PPTX/PDF is generated from live data with no manual ex
 
 ## Recommended immediate slice
 
-**Asset upload → OAuth foundation → mock publisher → Meta/YouTube adapter.**
+**Meta + YouTube real adapters → first comment → engagement watcher.** Items 1–3 are already done; item 4 is now the critical path. Meta needs an HTTPS callback (`APP_URL` tunnel or deployed URL), so the app can be built and tested with the mock provider until that is in place.
 
-That unlocks real publishing and makes the API keys immediately useful. In parallel, the no-key track can build WhatsApp intake, Market Pulse and the Virality Lab.
+In parallel, the no-key track can build WhatsApp intake, Market Pulse and the Virality Lab.
 
 ## Blocked by external approvals
 

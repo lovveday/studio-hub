@@ -232,11 +232,89 @@ function migrate(db: SqliteDb) {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS assets (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+      size INTEGER NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'image',
+      width INTEGER,
+      height INTEGER,
+      duration_seconds REAL,
+      alt_text TEXT NOT NULL DEFAULT '',
+      tags TEXT NOT NULL DEFAULT '',
+      checksum TEXT NOT NULL DEFAULT '',
+      created_by TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS post_media (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      UNIQUE(post_id, asset_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS social_accounts (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL,
+      external_id TEXT NOT NULL,
+      account_name TEXT NOT NULL,
+      account_handle TEXT NOT NULL DEFAULT '',
+      page_id TEXT,
+      scopes TEXT NOT NULL DEFAULT '',
+      access_token_encrypted TEXT,
+      refresh_token_encrypted TEXT,
+      token_expires_at TEXT,
+      status TEXT NOT NULL DEFAULT 'connected',
+      capabilities_json TEXT NOT NULL DEFAULT '{}',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(brand_id, platform, external_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS oauth_states (
+      state TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      code_verifier TEXT,
+      redirect_to TEXT,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS publish_attempts (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL,
+      social_account_id TEXT,
+      status TEXT NOT NULL,
+      attempt INTEGER NOT NULL DEFAULT 1,
+      external_id TEXT,
+      external_url TEXT,
+      error TEXT,
+      request_json TEXT NOT NULL DEFAULT '{}',
+      response_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_posts_brand_date ON posts(brand_id, scheduled_at);
     CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
     CREATE INDEX IF NOT EXISTS idx_knowledge_brand ON knowledge_items(brand_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_comments_brand ON comments(brand_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_metrics_brand_date ON metrics_daily(brand_id, date);
+    CREATE INDEX IF NOT EXISTS idx_assets_brand ON assets(brand_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_post_media_post ON post_media(post_id, position);
+    CREATE INDEX IF NOT EXISTS idx_social_accounts_brand ON social_accounts(brand_id, platform);
+    CREATE INDEX IF NOT EXISTS idx_publish_attempts_post ON publish_attempts(post_id, platform);
+    CREATE INDEX IF NOT EXISTS idx_oauth_states_expiry ON oauth_states(expires_at);
   `);
 }
 

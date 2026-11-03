@@ -9,6 +9,8 @@ import { uuid, randomToken } from "@/lib/password";
 import { generateVariants } from "@/lib/ai";
 import { getBrand, getBrandProfile, getPost, getPostVariants, listFacts, logActivity } from "@/lib/data";
 import { retrieveContext } from "@/lib/knowledge";
+import { removeAssetFile } from "@/lib/assets";
+import { publishPost } from "@/lib/publishers";
 import type { Platform } from "@/lib/platforms";
 
 function parseDate(value: FormDataEntryValue | null): string | null {
@@ -322,4 +324,51 @@ export async function markReadyAction(formData: FormData) {
   revalidatePath(`/posts/${postId}`);
   revalidatePath("/calendar");
   redirect(`/posts/${postId}?ready=1`);
+}
+
+export async function removePostAssetAction(formData: FormData) {
+  const user = await requireUser();
+  const brand = await getActiveBrand();
+  const postId = String(formData.get("postId") ?? "");
+  const mediaId = String(formData.get("mediaId") ?? "");
+  const post = getPost(postId);
+  if (!post || post.brand_id !== brand.id) redirect("/calendar");
+  const row = get<{ asset_id: string; file_path: string }>(
+    `SELECT pm.asset_id, a.file_path
+     FROM post_media pm JOIN assets a ON a.id = pm.asset_id
+     WHERE pm.id = ? AND pm.post_id = ?`,
+    [mediaId, postId]
+  );
+  if (!row) redirect(`/posts/${postId}`);
+  run("DELETE FROM post_media WHERE id = ?", [mediaId]);
+  const stillUsed = get<{ c: number }>("SELECT count(*) AS c FROM post_media WHERE asset_id = ?", [
+    row.asset_id,
+  ]);
+  if (Number(stillUsed?.c ?? 0) === 0) {
+    run("DELETE FROM assets WHERE id = ?", [row.asset_id]);
+    removeAssetFile(row.file_path);
+  }
+  logActivity({
+    brandId: brand.id,
+    userId: user.id,
+    action: "Removed media",
+    entity: "post",
+    entityId: postId,
+  });
+  revalidatePath(`/posts/${postId}`);
+  redirect(`/posts/${postId}?media=removed`);
+}
+
+export async function publishNowAction(formData: FormData) {
+  const user = await requireUser();
+  const postId = String(formData.get("postId") ?? "");
+  const post = getPost(postId);
+  if (!post) redirect("/calendar");
+  const summary = await publishPost(postId, user.id);
+  revalidatePath(`/posts/${postId}`);
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
+  redirect(
+    `/posts/${postId}?publish=${summary.total}&assisted=${summary.assisted}&failed=${summary.failed}`
+  );
 }

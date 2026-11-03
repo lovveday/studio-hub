@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { all, get, run } from "../src/lib/db";
+import { publishPost } from "../src/lib/publishers";
 import type { Post } from "../src/lib/types";
 
 const TICK_MS = 60_000;
@@ -41,7 +42,7 @@ function log(action: string, detail: string) {
   );
 }
 
-function tick() {
+async function tick() {
   const users = all<UserRow>("SELECT id, name FROM users");
   const now = new Date();
   const nowIso = now.toISOString();
@@ -56,19 +57,31 @@ function tick() {
     [nowIso]
   );
   for (const post of due) {
-    run("UPDATE posts SET status = 'ready', updated_at = ? WHERE id = ?", [nowIso, post.id]);
+    let summary = { published: 0, assisted: 0, failed: 0, total: 0 };
+    try {
+      summary = await publishPost(post.id, null);
+    } catch (error) {
+      log("Publish failed", `${post.title}: ${(error as Error).message}`);
+      run("UPDATE posts SET status = 'ready', updated_at = ? WHERE id = ?", [nowIso, post.id]);
+    }
+    const published = summary.published > 0;
     for (const user of users) {
       notify({
         userId: user.id,
         brandId: post.brand_id,
         type: "publish",
-        title: `Ready to post: ${post.title}`,
-        body: "The scheduled time has arrived. Open the post kit, copy the copy, and mark it posted.",
+        title: published ? `Published: ${post.title}` : `Ready to post: ${post.title}`,
+        body: published
+          ? `${summary.published} channel${summary.published === 1 ? "" : "s"} published. ${summary.assisted} assisted target${summary.assisted === 1 ? "" : "s"} remain.`
+          : "The scheduled time has arrived. Open the post kit, copy the copy, and mark it posted.",
         link: `/posts/${post.id}`,
         dedupeKey: `due:${post.id}:${user.id}`,
       });
     }
-    log("Post due", `${post.title} moved to ready`);
+    log(
+      "Post due",
+      `${post.title} · ${summary.published} published · ${summary.assisted} assisted · ${summary.failed} failed`
+    );
     dueCount += 1;
   }
 
@@ -123,5 +136,5 @@ function tick() {
 }
 
 console.log("Studio Hub worker started. Checking every 60 seconds. Press Ctrl+C to stop.");
-tick();
-setInterval(tick, TICK_MS);
+void tick();
+setInterval(() => void tick(), TICK_MS);

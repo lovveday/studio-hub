@@ -5,6 +5,7 @@ dist/
 data/
 storage/uploads/
 storage/reports/
+storage/assets/
 .npm-cache/
 .tmp/
 .smoke/

@@ -179,3 +179,55 @@ export type PlatformVariantDraft = {
   hashtags: string;
   firstComment: string;
 };
+
+export type AssetRow = {
+  id: string;
+  brand_id: string;
+  name: string;
+  file_path: string;
+  mime_type: string;
+  size: number;
+  kind: "image" | "video" | "audio" | "file";
+  width: number | null;
+  height: number | null;
+  duration_seconds: number | null;
+  alt_text: string;
+  tags: string;
+  checksum: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type SocialAccount = {
+  id: string;
+  brand_id: string;
+  platform: string;
+  external_id: string;
+  account_name: string;
+  account_handle: string;
+  page_id: string | null;
+  scopes: string;
+  access_token_encrypted: string | null;
+  refresh_token_encrypted: string | null;
+  token_expires_at: string | null;
+  status: "connected" | "needs_reconnect" | "disconnected";
+  capabilities_json: string;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PublishAttempt = {
+  id: string;
+  post_id: string;
+  platform: string;
+  social_account_id: string | null;
+  status: "published" | "failed" | "assisted_required" | "retrying";
+  attempt: number;
+  external_id: string | null;
+  external_url: string | null;
+  error: string | null;
+  request_json: string;
+  response_json: string;
+  created_at: string;
+};

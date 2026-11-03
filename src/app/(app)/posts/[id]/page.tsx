@@ -25,14 +25,18 @@ import {
   getBrandProfile,
   getPost,
   getPostVariants,
+  listPostAssets,
+  listPublishAttempts,
   logActivity,
 } from "@/lib/data";
 import { aiStatus } from "@/lib/ai";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { assetUrl } from "@/lib/assets";
+import { fileSize, formatDate, formatDateTime } from "@/lib/utils";
 import { platformMeta } from "@/lib/platforms";
 import { PostVariantTabs } from "@/components/post-variant-tabs";
 import { CopyButton } from "@/components/copy-button";
 import { DictateButton } from "@/components/dictate-button";
+import { AssetUploader } from "@/components/asset-uploader";
 import {
   approvePostAction,
   createShareLinkAction,
@@ -40,6 +44,8 @@ import {
   generateVariantsAction,
   markPublishedAction,
   markReadyAction,
+  publishNowAction,
+  removePostAssetAction,
   schedulePostAction,
   updatePostAction,
 } from "@/app/actions/posts";
@@ -80,6 +86,8 @@ export default async function PostDetailPage({
     ready?: string;
     error?: string;
     created?: string;
+    media?: string;
+    publish?: string;
   }>;
 }) {
   const user = await requireUser();
@@ -91,6 +99,8 @@ export default async function PostDetailPage({
   const brand = getBrand(post.brand_id) ?? activeBrand;
   const profile = getBrandProfile(post.brand_id);
   const variants = getPostVariants(post.id);
+  const media = listPostAssets(post.id);
+  const publishAttempts = listPublishAttempts(post.id);
   const ai = aiStatus();
   const platforms = variants.map((variant) => variant.platform);
   const sharePath = post.share_token ? `/approvals/${post.share_token}` : "";
@@ -158,6 +168,13 @@ export default async function PostDetailPage({
                     Build post kit
                   </Button>
                 </form>
+                <form action={publishNowAction}>
+                  <input type="hidden" name="postId" value={post.id} />
+                  <Button type="submit" variant="outline" size="sm">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Run publisher
+                  </Button>
+                </form>
                 <form action={markPublishedAction}>
                   <input type="hidden" name="postId" value={post.id} />
                   <Button type="submit" variant="coral" size="sm">
@@ -196,6 +213,13 @@ export default async function PostDetailPage({
       {query.ready ? (
         <Notice tone="info">
           Post kit built. Copy each caption, open the platform, and mark the post when it is live.
+        </Notice>
+      ) : null}
+      {query.media ? <Notice tone="success">Media updated.</Notice> : null}
+      {query.publish ? (
+        <Notice tone="info">
+          Publisher ran: {query.publish} target{query.publish === "1" ? "" : "s"} handled. Demo accounts publish
+          immediately; channels without a connected account stay as assisted tasks.
         </Notice>
       ) : null}
       {query.error ? <Notice tone="error">{query.error}</Notice> : null}
@@ -288,6 +312,68 @@ export default async function PostDetailPage({
                 </div>
               </div>
             </form>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Creative"
+              description="The image, video or audio that goes with this post. Attach it before scheduling a real publish."
+              action={<Badge tone="neutral">{media.length}</Badge>}
+            />
+            <div className="space-y-4 p-5">
+              <AssetUploader postId={post.id} />
+              {media.length === 0 ? (
+                <p className="text-[11px] leading-relaxed text-muted">
+                  No media attached yet. The assisted kit will tell you what size each platform needs.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {media.map(({ id: mediaId, asset }) => {
+                    const url = assetUrl(asset.file_path);
+                    return (
+                      <div key={mediaId} className="overflow-hidden rounded-xl border border-line bg-white">
+                        <div className="flex aspect-video items-center justify-center bg-cream/50">
+                          {asset.kind === "image" ? (
+                            <img src={url} alt={asset.alt_text || asset.name} className="h-full w-full object-cover" />
+                          ) : asset.kind === "video" ? (
+                            <video src={url} controls preload="metadata" className="h-full w-full object-cover" />
+                          ) : (
+                            <audio src={url} controls className="w-full px-4" />
+                          )}
+                        </div>
+                        <div className="flex items-start gap-2 p-2.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] font-semibold text-ink">{asset.name}</p>
+                            <p className="mt-0.5 text-[9px] text-muted">
+                              {asset.kind} · {fileSize(asset.size)}
+                            </p>
+                          </div>
+                          <a
+                            href={url}
+                            download
+                            className="inline-flex h-7 shrink-0 items-center rounded-lg border border-line bg-white px-2 text-[9px] font-bold text-ink hover:bg-cream/60"
+                          >
+                            Download
+                          </a>
+                          <form action={removePostAssetAction}>
+                            <input type="hidden" name="postId" value={post.id} />
+                            <input type="hidden" name="mediaId" value={mediaId} />
+                            <button
+                              type="submit"
+                              aria-label={`Remove ${asset.name}`}
+                              title="Remove media"
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-line bg-white text-muted hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </Card>
 
           <Card>
@@ -412,6 +498,65 @@ export default async function PostDetailPage({
                 );
               })}
               {safety.length === 0 ? <p className="px-5 py-5 text-[11px] text-muted">No variants to check.</p> : null}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Publish log"
+              description="Every target attempt: mock, live or assisted."
+              action={<Badge tone="neutral">{publishAttempts.length}</Badge>}
+            />
+            <div className="divide-y divide-line/70">
+              {publishAttempts.length === 0 ? (
+                <p className="px-5 py-5 text-[11px] text-muted">
+                  No publish attempts yet. Run the publisher after connecting a demo or real account.
+                </p>
+              ) : (
+                publishAttempts.map((attempt) => (
+                  <div key={attempt.id} className="flex items-start gap-2.5 px-5 py-2.5">
+                    <span
+                      className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: platformMeta(attempt.platform).color }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-ink/70">
+                          {platformMeta(attempt.platform).label}
+                        </p>
+                        <Badge
+                          tone={
+                            attempt.status === "published"
+                              ? "teal"
+                              : attempt.status === "failed"
+                                ? "red"
+                                : attempt.status === "assisted_required"
+                                  ? "gold"
+                                  : "neutral"
+                          }
+                        >
+                          {attempt.status.replace("_", " ")}
+                        </Badge>
+                        <span className="text-[9px] text-muted">{formatDateTime(attempt.created_at)}</span>
+                      </div>
+                      {attempt.external_url ? (
+                        <a
+                          href={attempt.external_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-[#0A66C2] hover:underline"
+                        >
+                          <ExternalLink className="h-2.5 w-2.5" />
+                          {attempt.external_id}
+                        </a>
+                      ) : null}
+                      {attempt.error ? (
+                        <p className="mt-0.5 text-[10px] leading-relaxed text-muted">{attempt.error}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
 

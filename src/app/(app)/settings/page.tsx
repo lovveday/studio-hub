@@ -4,6 +4,7 @@ import {
   Building2,
   CheckCircle2,
   Database,
+  ExternalLink,
   HardDrive,
   KeyRound,
   Palette,
@@ -22,9 +23,12 @@ import {
   getRetentionStats,
   getSetting,
   listBrands,
+  listSocialAccounts,
   listUsers,
 } from "@/lib/data";
 import { aiStatus } from "@/lib/ai";
+import { isEncryptionConfigured } from "@/lib/crypto";
+import { oauthProviderConfigured, type OAuthPlatform } from "@/lib/oauth";
 import { PLATFORM_ORDER, platformMeta } from "@/lib/platforms";
 import { fileSize, safeJson } from "@/lib/utils";
 import {
@@ -33,6 +37,7 @@ import {
   updateBrandBasicsAction,
   updateBrandProfileAction,
 } from "@/app/actions/brand";
+import { disconnectChannelAction } from "@/app/actions/channels";
 import { runRetentionAction, saveRetentionAction } from "@/app/actions/settings";
 import {
   Avatar,
@@ -60,6 +65,9 @@ export default async function SettingsPage({
     notifications?: string;
     sessions?: string;
     pruned?: string;
+    connected?: string;
+    disconnected?: string;
+    accounts?: string;
   }>;
 }) {
   const user = await requireUser();
@@ -67,6 +75,7 @@ export default async function SettingsPage({
   const profile = getBrandProfile(brand.id);
   const brands = listBrands();
   const users = listUsers();
+  const accounts = listSocialAccounts(brand.id);
   const retention = getRetentionStats();
   const hotDays = getSetting("retention.hot_days", "90");
   const voiceDays = getSetting("retention.voice_audio_days", "7");
@@ -74,6 +83,16 @@ export default async function SettingsPage({
   const params = await searchParams;
   const canManage = canManageBrand(user);
   const pillars = safeJson<string[]>(profile?.pillars, []).join("\n");
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const isLocalMeta = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
+  const encryptionReady = isEncryptionConfigured();
+
+  function providerFor(platform: string): OAuthPlatform {
+    if (platform === "facebook" || platform === "instagram") return "meta";
+    if (platform === "youtube") return "google";
+    if (platform === "linkedin" || platform === "x" || platform === "tiktok") return platform;
+    return "mock";
+  }
 
   return (
     <div className="space-y-6 fade-up">
@@ -85,6 +104,13 @@ export default async function SettingsPage({
       />
 
       {params.saved ? <Notice tone="success">Settings saved.</Notice> : null}
+      {params.connected ? (
+        <Notice tone="success">
+          Connected {params.connected} account{params.connected === "1" ? "" : "s"}
+          {params.accounts ? `: ${params.accounts}` : "."}
+        </Notice>
+      ) : null}
+      {params.disconnected ? <Notice tone="info">Channel disconnected.</Notice> : null}
       {params.error ? <Notice tone="error">{params.error}</Notice> : null}
       {params.retentionDryRun ? (
         <Notice tone="info">
@@ -182,36 +208,159 @@ export default async function SettingsPage({
           <Card>
             <CardHeader
               title="Channels"
-              description="All six are in assisted mode until the developer apps are approved."
-              action={<WifiOff className="h-4 w-4 text-muted" />}
+              description="Connect the real accounts when the developer apps are ready, or connect demo accounts to test publishing now."
+              action={
+                <Badge tone={accounts.length ? "teal" : "gold"}>
+                  {accounts.length ? `${accounts.length} connected` : "Assisted only"}
+                </Badge>
+              }
             />
+            <div className="space-y-3 border-b border-line bg-cream/30 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
+                    OAuth redirect base
+                  </p>
+                  <code className="mt-1 block break-all rounded-lg bg-white px-2.5 py-1.5 text-[10px] text-ink">
+                    {appUrl}/api/oauth/&lt;platform&gt;/callback
+                  </code>
+                </div>
+                <Badge tone={isLocalMeta ? "coral" : "teal"}>
+                  {isLocalMeta ? "Meta needs HTTPS" : "HTTPS ready"}
+                </Badge>
+              </div>
+              <p className="text-[10px] leading-relaxed text-muted">
+                Meta rejected the localhost callback, as expected. Set <code>APP_URL</code> to a tunnel or
+                deployed HTTPS URL before connecting Meta; Google can use localhost. The app uses this same
+                value when it builds every OAuth callback.
+              </p>
+              {!encryptionReady ? (
+                <p className="text-[10px] font-semibold text-red-600">
+                  Set <code>APP_ENCRYPTION_KEY</code> before connecting a real account. Demo connections work
+                  without it.
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/api/oauth/mock/start"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 text-[10px] font-bold text-ink hover:bg-cream/60"
+                >
+                  <Wifi className="h-3 w-3" />
+                  Connect demo accounts
+                </Link>
+                <span className="text-[10px] text-muted">
+                  Demo accounts publish immediately and never touch a real platform.
+                </span>
+              </div>
+            </div>
             <div className="divide-y divide-line/70">
               {PLATFORM_ORDER.map((platform) => {
                 const meta = platformMeta(platform);
+                const platformAccounts = accounts.filter((account) => account.platform === platform);
+                const provider = providerFor(platform);
+                const configured = oauthProviderConfigured(provider);
+                const canConnect =
+                  configured && (provider === "mock" || encryptionReady) && !(provider === "meta" && isLocalMeta);
+                const blockedReason =
+                  provider === "meta" && isLocalMeta
+                    ? "Set APP_URL to HTTPS first"
+                    : !encryptionReady
+                      ? "Set APP_ENCRYPTION_KEY first"
+                      : "Add credentials first";
                 return (
-                  <div key={platform} className="flex items-start gap-3 px-5 py-3.5">
-                    <span
-                      className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold text-white"
-                      style={{ backgroundColor: meta.color }}
-                    >
-                      {meta.short}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs font-semibold text-ink">{meta.label}</p>
-                        <Badge tone="gold">Assisted</Badge>
+                  <div key={platform} className="px-5 py-3.5">
+                    <div className="flex items-start gap-3">
+                      <span
+                        className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold text-white"
+                        style={{ backgroundColor: meta.color }}
+                      >
+                        {meta.short}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-xs font-semibold text-ink">{meta.label}</p>
+                          {platformAccounts.length > 0 ? (
+                            <Badge tone="teal">{platformAccounts.length} connected</Badge>
+                          ) : (
+                            <Badge tone="gold">Assisted</Badge>
+                          )}
+                          {!configured ? (
+                            <Badge tone="neutral">Add {provider} credentials</Badge>
+                          ) : null}
+                        </div>
+                        {platformAccounts.length === 0 ? (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                            <p className="text-[10px] leading-relaxed text-muted">{meta.assistedNote}</p>
+                            {canConnect ? (
+                              <Link
+                                href={`/api/oauth/${provider}/start`}
+                                className="inline-flex h-7 items-center gap-1 rounded-lg border border-line bg-white px-2 text-[9px] font-bold text-ink hover:bg-cream/60"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Connect
+                              </Link>
+                            ) : configured ? (
+                              <span className="text-[9px] font-semibold text-muted">{blockedReason}</span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="mt-2 space-y-2">
+                            {platformAccounts.map((account) => {
+                              const metadata = safeJson<{ mock?: boolean; kind?: string }>(
+                                account.metadata_json,
+                                {}
+                              );
+                              return (
+                                <div
+                                  key={account.id}
+                                  className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white px-2.5 py-2"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-[11px] font-semibold text-ink">
+                                      {account.account_name}
+                                    </p>
+                                    <p className="truncate text-[9px] text-muted">
+                                      {account.account_handle}
+                                      {metadata.kind ? ` · ${metadata.kind}` : ""}
+                                      {account.status !== "connected" ? ` · ${account.status}` : ""}
+                                    </p>
+                                  </div>
+                                  {metadata.mock ? <Badge tone="gold">Demo</Badge> : null}
+                                  {canConnect ? (
+                                    <Link
+                                      href={`/api/oauth/${provider}/start`}
+                                      className="inline-flex h-7 items-center rounded-lg border border-line bg-white px-2 text-[9px] font-bold text-ink hover:bg-cream/60"
+                                    >
+                                      Reconnect
+                                    </Link>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold text-muted">{blockedReason}</span>
+                                  )}
+                                  <form action={disconnectChannelAction}>
+                                    <input type="hidden" name="accountId" value={account.id} />
+                                    <button
+                                      type="submit"
+                                      className="inline-flex h-7 items-center rounded-lg border border-line bg-white px-2 text-[9px] font-bold text-muted hover:bg-red-50 hover:text-red-600"
+                                    >
+                                      Disconnect
+                                    </button>
+                                  </form>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                      <p className="mt-1 text-[10px] leading-relaxed text-muted">{meta.assistedNote}</p>
                     </div>
-                    <span className="mt-1 text-[9px] font-bold uppercase tracking-[0.08em] text-muted">No API</span>
                   </div>
                 );
               })}
             </div>
             <div className="border-t border-line bg-cream/30 px-5 py-3">
               <p className="text-[10px] leading-relaxed text-muted">
-                When Meta, Google, LinkedIn, X and TikTok credentials are added, these rows switch to
-                live publishing without a data migration. Until then, every post gets a copy-and-open kit.
+                Real tokens are encrypted with <code>APP_ENCRYPTION_KEY</code> before they touch the database.
+                Capabilities are stored per channel, so unsupported actions stay assisted instead of failing
+                silently.
               </p>
             </div>
           </Card>

@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { all, get, run } from "./db";
 import type {
   ActivityRow,
+  AssetRow,
   Brand,
   BrandFact,
   BrandProfile,
@@ -13,7 +14,9 @@ import type {
   NotificationRow,
   Post,
   PostVariant,
+  PublishAttempt,
   ReportRow,
+  SocialAccount,
   User,
 } from "./types";
 
@@ -483,6 +486,10 @@ export function getRetentionStats(): RetentionStats {
     "reports",
     "activity_log",
     "sessions",
+    "assets",
+    "post_media",
+    "social_accounts",
+    "publish_attempts",
   ];
   const rows = tables.map((table) => {
     const row = get<{ c: number }>(`SELECT count(*) AS c FROM ${table}`);
@@ -572,5 +579,99 @@ export function logActivity(input: {
       input.detail ?? "",
       new Date().toISOString(),
     ]
+  );
+}
+
+export function listPostAssets(postId: string): Array<{ id: string; position: number; asset: AssetRow }> {
+  return all<{
+    id: string;
+    position: number;
+    asset_id: string;
+    brand_id: string;
+    name: string;
+    file_path: string;
+    mime_type: string;
+    size: number;
+    kind: AssetRow["kind"];
+    width: number | null;
+    height: number | null;
+    duration_seconds: number | null;
+    alt_text: string;
+    tags: string;
+    checksum: string;
+    created_by: string | null;
+    created_at: string;
+  }>(
+    `SELECT pm.id, pm.position,
+            a.id AS asset_id, a.brand_id, a.name, a.file_path, a.mime_type, a.size, a.kind,
+            a.width, a.height, a.duration_seconds, a.alt_text, a.tags, a.checksum, a.created_by, a.created_at
+     FROM post_media pm
+     JOIN assets a ON a.id = pm.asset_id
+     WHERE pm.post_id = ?
+     ORDER BY pm.position ASC`,
+    [postId]
+  ).map((row) => ({
+    id: row.id,
+    position: row.position,
+    asset: {
+      id: row.asset_id,
+      brand_id: row.brand_id,
+      name: row.name,
+      file_path: row.file_path,
+      mime_type: row.mime_type,
+      size: row.size,
+      kind: row.kind,
+      width: row.width,
+      height: row.height,
+      duration_seconds: row.duration_seconds,
+      alt_text: row.alt_text,
+      tags: row.tags,
+      checksum: row.checksum,
+      created_by: row.created_by,
+      created_at: row.created_at,
+    },
+  }));
+}
+
+export function getAsset(id: string): AssetRow | undefined {
+  return get<AssetRow>("SELECT * FROM assets WHERE id = ?", [id]);
+}
+
+export function listAssets(brandId: string, limit = 100): AssetRow[] {
+  return all<AssetRow>("SELECT * FROM assets WHERE brand_id = ? ORDER BY created_at DESC LIMIT ?", [
+    brandId,
+    limit,
+  ]);
+}
+
+export function listSocialAccounts(brandId: string): SocialAccount[] {
+  return all<SocialAccount>(
+    "SELECT * FROM social_accounts WHERE brand_id = ? ORDER BY platform ASC, created_at ASC",
+    [brandId]
+  );
+}
+
+export function getSocialAccount(id: string): SocialAccount | undefined {
+  return get<SocialAccount>("SELECT * FROM social_accounts WHERE id = ?", [id]);
+}
+
+export function getSocialAccountForPlatform(brandId: string, platform: string): SocialAccount | undefined {
+  return get<SocialAccount>(
+    "SELECT * FROM social_accounts WHERE brand_id = ? AND platform = ? AND status = 'connected' ORDER BY created_at DESC LIMIT 1",
+    [brandId, platform]
+  );
+}
+
+export function listPublishAttempts(postId: string): PublishAttempt[] {
+  return all<PublishAttempt>(
+    "SELECT * FROM publish_attempts WHERE post_id = ? ORDER BY created_at DESC",
+    [postId]
+  );
+}
+
+export function getPublishedAttempt(postId: string, platform: string): PublishAttempt | undefined {
+  return get<PublishAttempt>(
+    "SELECT * FROM publish_attempts WHERE post_id = ? AND platform = ? AND status = 'published' ORDER BY created_at DESC LIMIT 1",
+    [postId, platform]
   );
 }
