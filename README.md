@@ -2,7 +2,7 @@
 
 A local-first social media command center for a small agency team managing several client brands. It covers the loop the plan called for: **capture knowledge → plan → create → approve → schedule → assist publishing → engage → report** — with a Knowledge Inbox that turns notes, files, links and WhatsApp voice notes into versioned brand facts.
 
-> This is the Phase 0 + Phase 1 slice. Platform APIs are not connected yet, so publishing runs in **assisted mode**: every post produces a per-platform copy-and-open kit. AI runs on **demo templates** until `GEMINI_API_KEY` is set.
+> Publishing is **assisted by default**. Real OAuth connections and a mock publisher are built; real Meta/YouTube/LinkedIn/X/TikTok adapters are the next slice. AI uses Gemini when a key is present, otherwise clearly labelled demo templates.
 
 ## Run it
 
@@ -11,6 +11,10 @@ npm install
 npm run dev
 # open http://localhost:3000
 ```
+
+Do **not** pipe `next dev` output into a file inside this folder. Next watches the project and will reload in a loop when that log file changes. Use the terminal, or write logs to `$env:TEMP`.
+
+Deployment/callback guidance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 Demo accounts (seeded):
 
