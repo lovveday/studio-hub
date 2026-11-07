@@ -1,6 +1,17 @@
 # Postiz zero-budget decision
 
-Status: **Phase 0 spike blocked locally — Docker is not installed.** The deployment kit and Codespaces path are ready.
+Status: **Phase 0 spike is prepared for GitHub Codespaces — Docker is not installed locally.**
+
+## Selected runtime
+
+GitHub Codespaces (4-core, Docker-in-Docker). The spike folder now includes:
+
+- `.devcontainer/devcontainer.json`
+- `docker-compose.codespaces.yaml`
+- `scripts/codespaces-env.sh` (writes `.env` with the forwarded 4007 URL)
+- `CODESPACES.md`
+
+Push the folder to a private GitHub repo and open a Codespace; no local Docker install is needed.
 
 ## Decision
 
