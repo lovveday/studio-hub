@@ -68,6 +68,17 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 - Dictation button on the brief: browser speech recognition appends to the textarea (Chrome/Edge), with a voice-note fallback in Knowledge.
 - Text generation falls back to DeepSeek (OpenAI-compatible) when a Gemini key is absent; transcription and image reading still need Gemini.
 
+### Virality Lab
+- `/virality` is a teardown library; `/virality/new` takes a clip, a public link or a transcript; `/virality/[id]` is the full read and adaptation brief.
+- **Inputs:** upload an MP4/MOV/WebM up to 100 MB (the browser captures up to 8 frames before upload), paste a TikTok/Instagram/YouTube/Facebook/LinkedIn/X link plus its transcript, or paste a script. Links are read for public metadata only — the lab never downloads third-party video.
+- **Pipeline:** Gemini watches the clip through the File API (or reads the captured frames if video is unavailable), then writes a timestamped teardown and an adaptation brief grounded in the brand's approved facts. Deterministic fallbacks keep the page usable when Gemini is busy or unset.
+- **Output:** hook and device; timed structure with visual, audio and on-screen evidence; pacing; CTA; why-it-likely-worked hypotheses with evidence; risks and limits; adaptation angle; script; shots; caption; CTA; approved facts used; guardrails; a two-variant test plan.
+- **Wording check:** compares 4-word sequences in the draft with the source, reports the share of copied words, and lists the phrases. Safe is under 8%, watch is 8–20%, rewrite is over 20%; when there is no source text it says "Not compared" instead of claiming 0%.
+- **Source handling:** an uploaded clip is deleted from this app's storage as soon as the teardown is saved; frames and the written record remain. Gemini files are deleted immediately after the read.
+- **Turn it into a post:** "Create draft post" writes a real draft with the caption and first comment; nothing publishes.
+- **Samples:** each seeded brand has an illustrative sample teardown. It is labelled, fictional, and its price is re-grounded against the brand's current approved price when loaded.
+- Full method, limits and test steps: [docs/VIRALITY-LAB.md](docs/VIRALITY-LAB.md).
+
 ### Calendar
 - Month grid with Mon–Sun weeks, previous/next/today navigation.
 - Status-coloured post chips with platform dots and publish time.

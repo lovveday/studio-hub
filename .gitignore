@@ -6,9 +6,11 @@ data/
 storage/uploads/
 storage/reports/
 storage/assets/
+storage/virality/
 .npm-cache/
 .tmp/
 .smoke/
+.taste-skill/
 .env
 .env.local
 *.log

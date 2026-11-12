@@ -75,9 +75,11 @@ After the spike, validate: 300 MB upload, draft, preview link, one channel, sche
 
 ## Next action
 
-The moment a runtime is available:
+The Virality Lab is now built and running in Studio Hub (see [VIRALITY-LAB.md](VIRALITY-LAB.md)); it does not depend on Postiz.
+
+The moment a Postiz runtime is available:
 
 1. Run `docker compose up` in `postiz-spike`.
 2. Create the admin, upload 300 MB, check the preview link.
 3. Connect one free channel.
-4. Only then wire Studio Hub's Postiz API client and build the Virality Lab.
+4. Then wire Studio Hub's Postiz API client so a Virality Lab draft can become a Postiz draft/scheduled post.

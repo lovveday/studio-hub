@@ -317,6 +317,38 @@ function migrate(db: SqliteDb) {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS virality_analyses (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'processing',
+      stage TEXT NOT NULL DEFAULT 'saving-source',
+      source_type TEXT NOT NULL DEFAULT 'upload',
+      source_url TEXT,
+      source_title TEXT NOT NULL DEFAULT '',
+      platform TEXT NOT NULL DEFAULT '',
+      creator TEXT NOT NULL DEFAULT '',
+      caption TEXT NOT NULL DEFAULT '',
+      transcript TEXT NOT NULL DEFAULT '',
+      duration_seconds REAL,
+      width INTEGER,
+      height INTEGER,
+      mime_type TEXT,
+      file_path TEXT,
+      poster_path TEXT,
+      frames_json TEXT NOT NULL DEFAULT '[]',
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      teardown_json TEXT,
+      adaptation_json TEXT,
+      similarity_json TEXT,
+      mode TEXT,
+      confidence TEXT,
+      error TEXT,
+      source_deleted_at TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_posts_brand_date ON posts(brand_id, scheduled_at);
     CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
     CREATE INDEX IF NOT EXISTS idx_knowledge_brand ON knowledge_items(brand_id, created_at);
@@ -327,6 +359,7 @@ function migrate(db: SqliteDb) {
     CREATE INDEX IF NOT EXISTS idx_social_accounts_brand ON social_accounts(brand_id, platform);
     CREATE INDEX IF NOT EXISTS idx_publish_attempts_post ON publish_attempts(post_id, platform);
     CREATE INDEX IF NOT EXISTS idx_oauth_states_expiry ON oauth_states(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_virality_brand ON virality_analyses(brand_id, created_at);
   `);
 
   // Non-destructive upgrades for databases created before media uploads existed.

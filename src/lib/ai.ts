@@ -1,7 +1,11 @@
 import type { BrandFact, BrandProfile, FactCandidate, PlatformVariantDraft } from "./types";
 import { platformMeta } from "./platforms";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const MODEL_FALLBACKS = (process.env.GEMINI_MODEL_FALLBACKS || "gemini-3.6-flash,gemini-3.1-flash-lite")
+  .split(",")
+  .map((model) => model.trim())
+  .filter(Boolean);
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 const DEEPSEEK_BASE = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -36,26 +40,45 @@ export function aiStatus() {
   };
 }
 
-type Part = { text: string } | { inlineData: { mimeType: string; data: string } };
+type Part =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } }
+  | { fileData: { mimeType: string; fileUri: string } };
 
-async function callGemini(parts: Part[], options?: { json?: boolean; temperature?: number }) {
+function geminiModels(): string[] {
+  return [...new Set([MODEL, ...MODEL_FALLBACKS])];
+}
+
+async function callGeminiWithModel(
+  model: string,
+  parts: Part[],
+  options?: { json?: boolean; temperature?: number }
+) {
   const key = aiKey();
   if (!key) throw new Error("No Gemini API key configured.");
-  const response = await fetch(`${API_BASE}/${MODEL}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        temperature: options?.temperature ?? 0.7,
-        ...(options?.json ? { responseMimeType: "application/json" } : {}),
-      },
-    }),
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `${API_BASE}/${model}:generateContent?key=${encodeURIComponent(key)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          ...(options?.json ? { responseMimeType: "application/json" } : {}),
+        },
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(240_000),
+    }
+  );
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Gemini ${response.status}: ${body.slice(0, 400)}`);
+    const error = new Error(`Gemini ${response.status}: ${body.slice(0, 400)}`) as Error & {
+      status?: number;
+    };
+    error.status = response.status;
+    throw error;
   }
   const data = (await response.json()) as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -63,6 +86,35 @@ async function callGemini(parts: Part[], options?: { json?: boolean; temperature
   const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
   if (!text) throw new Error("Gemini returned an empty response.");
   return text;
+}
+
+async function callGemini(parts: Part[], options?: { json?: boolean; temperature?: number }) {
+  let lastError: unknown;
+  for (const model of geminiModels()) {
+    try {
+      return await callGeminiWithModel(model, parts, options);
+    } catch (error) {
+      lastError = error;
+      const status = (error as { status?: number }).status;
+      // A retired model (404), quota (429) or a capacity spike (5xx) is worth
+      // trying on the next model. A malformed request is not.
+      if (status !== 404 && status !== 429 && !(status && status >= 500)) throw error;
+      console.warn(`[ai] ${model} unavailable (${status}); trying the next Gemini model.`);
+    }
+  }
+  throw lastError;
+}
+
+export async function geminiGenerateJson<T>(
+  parts: Part[],
+  temperature = 0.55
+): Promise<T> {
+  const text = await callGemini(parts, { json: true, temperature });
+  return parseJson<T>(text);
+}
+
+export function geminiConfigured(): boolean {
+  return Boolean(aiKey());
 }
 
 async function callDeepSeek(parts: Part[], options?: { json?: boolean; temperature?: number }) {

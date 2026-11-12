@@ -102,18 +102,18 @@ Why: newer information is not only in the client notebook.
 
 Done when: a question returns internal facts and live sources separately, with working links and dates.
 
-### 8. Virality Lab — P1, high user interest
+### 8. Virality Lab — P1, high user interest ✅ done
 Why: understand why another creator’s video worked and adapt the structure safely.
 
-- Input: uploaded video or URL; official metadata where available.
-- Pipeline: probe → transcript → OCR keyframes → scene/pacing → audio features → metrics where available.
-- Output: hook (0–3s), structure timeline, keywords/entities, hashtags, CTA, length, posting time, “why it likely worked” hypotheses with evidence.
-- Adaptation brief: same structure, new brand angle, script outline, shot list, CTA; similarity check against the source.
-- Keyword extraction and a pattern library per niche.
-- Best posting time is a separate engine, not inferred from one viral video.
-- No downloading/reposting third-party video; delete source after analysis.
+- Input: uploaded video or URL; official metadata where available. ✅ upload (100 MB, browser frames), link metadata + transcript, transcript-only.
+- Pipeline: probe → transcript → OCR keyframes → scene/pacing → audio features → metrics where available. ✅ Gemini video/File API, captured-frame vision fallback, deterministic text fallback; no ffmpeg or platform metrics yet.
+- Output: hook (0–3s), structure timeline, keywords/entities, hashtags, CTA, length, posting time, “why it likely worked” hypotheses with evidence. ✅ hook, timed structure, evidence-linked hypotheses, CTA, keywords/hashtags; posting time stays in the separate Best Time engine.
+- Adaptation brief: same structure, new brand angle, script outline, shot list, CTA; similarity check against the source. ✅ grounded in approved facts, with guardrails and a 4-gram wording-overlap check.
+- Keyword extraction and a pattern library per niche. ✅ per brand: hook devices, asks, runtime/beats/safe count.
+- Best posting time is a separate engine, not inferred from one viral video. ✅
+- No downloading/reposting third-party video; delete source after analysis. ✅ links are metadata-only; uploads are deleted after the teardown.
 
-Done when: a video produces a cited teardown + a brand-safe adaptation brief + a 2-variant test plan.
+Done when: a video produces a cited teardown + a brand-safe adaptation brief + a 2-variant test plan. ✅ See [VIRALITY-LAB.md](VIRALITY-LAB.md).
 
 ### 9. Best Time Engine — P1
 Why: schedule when the audience is actually there.
@@ -167,7 +167,7 @@ Done when: weekly/monthly PPTX/PDF is generated from live data with no manual ex
 
 **Meta + YouTube real adapters → first comment → engagement watcher.** Items 1–3 are already done; item 4 is now the critical path. Meta needs an HTTPS callback (`APP_URL` tunnel or deployed URL), so the app can be built and tested with the mock provider until that is in place.
 
-In parallel, the no-key track can build WhatsApp intake, Market Pulse and the Virality Lab.
+The no-key track now has WhatsApp intake, Market Pulse and the **Virality Lab** (item 8) built. The next no-key additions are a Postiz API client, best-time confidence labels, and an ffmpeg media worker for measured cuts/OCR rather than inferred ones.
 
 ## Blocked by external approvals
 
