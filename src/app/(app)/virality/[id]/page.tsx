@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
+  Download,
   Film,
   FlaskConical,
   Image as ImageIcon,
@@ -309,6 +310,14 @@ export default async function TeardownPage({
         }`}
         actions={
           <>
+            <a
+              href={`/api/virality/${row.id}/pdf`}
+              download
+              className={buttonClasses("outline", "sm")}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export PDF
+            </a>
             <Link href="/virality/new" className={buttonClasses("outline", "sm")}>
               <Plus className="h-3.5 w-3.5" />
               New teardown
@@ -690,10 +699,11 @@ export default async function TeardownPage({
                   </p>
                   <form action={createPostFromAnalysisAction} className="mt-2 flex gap-2">
                     <input type="hidden" name="id" value={row.id} />
-                    <Select name="platform" defaultValue={row.platform || "instagram"} className="h-9 text-xs">
+                    <Select name="platform" defaultValue="all" className="h-9 text-xs">
+                      <option value="all">All channels (Omnichannel draft)</option>
                       {PLATFORM_ORDER.map((value) => (
                         <option key={value} value={value}>
-                          {PLATFORMS[value].label}
+                          {PLATFORMS[value].label} only
                         </option>
                       ))}
                     </Select>

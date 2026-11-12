@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3, Mic, Sparkles, Wand2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, FlaskConical, Mic, Sparkles, Wand2 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getActiveBrand } from "@/lib/brand-context";
 import { getBrandProfile, listFacts, listPosts } from "@/lib/data";
+import { listAnalyses, parseAnalysis } from "@/lib/virality";
 import { aiStatus } from "@/lib/ai";
 import { PLATFORM_ORDER, platformMeta } from "@/lib/platforms";
 import { createPostAction } from "@/app/actions/posts";
@@ -41,6 +42,10 @@ export default async function ComposerPage({
   const ai = aiStatus();
   const params = await searchParams;
   const recent = listPosts(brand.id, 5);
+  const viralRows = listAnalyses(brand.id, 4);
+  const viralAnalyses = viralRows
+    .map(parseAnalysis)
+    .filter((item) => item.status === "ready" && item.teardown);
   const pillars = (() => {
     try {
       return JSON.parse(profile?.pillars ?? "[]") as string[];
@@ -234,6 +239,50 @@ export default async function ComposerPage({
               ))}
             </ol>
           </Card>
+
+          {viralAnalyses.length > 0 ? (
+            <Card>
+              <CardHeader
+                title="Proven viral blueprints"
+                description="Hooks & structures from the Virality Lab."
+                action={
+                  <Link href="/virality" className="text-[10px] font-semibold text-coral hover:underline flex items-center gap-1">
+                    <FlaskConical className="h-3 w-3" />
+                    Open Lab
+                  </Link>
+                }
+              />
+              <div className="divide-y divide-line/70">
+                {viralAnalyses.slice(0, 3).map((analysis) => {
+                  const hook = analysis.teardown?.hook;
+                  const angle = analysis.adaptation?.angle;
+                  return (
+                    <div key={analysis.id} className="p-4 space-y-1.5 transition-colors hover:bg-cream/30">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-coral">
+                          {hook?.device || "Structure"}
+                        </span>
+                        <Link
+                          href={`/virality/${analysis.id}`}
+                          className="text-[10px] font-semibold text-muted hover:text-ink flex items-center gap-0.5"
+                        >
+                          View <ArrowRight className="h-2.5 w-2.5" />
+                        </Link>
+                      </div>
+                      <p className="text-[11px] font-semibold text-ink line-clamp-1">
+                        “{hook?.text}”
+                      </p>
+                      {angle ? (
+                        <p className="text-[10px] text-muted line-clamp-2">
+                          Brand angle: {angle}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader title="Recent drafts" description="Pick up where you left off." />

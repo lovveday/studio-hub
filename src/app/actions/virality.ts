@@ -17,7 +17,62 @@ import {
   retryViralityAnalysis,
 } from "@/lib/virality";
 
-const PLATFORMS = new Set(["tiktok", "instagram", "youtube", "facebook", "linkedin", "x"]);
+import { PLATFORM_ORDER, type Platform } from "@/lib/platforms";
+
+const PLATFORMS = new Set(["tiktok", "instagram", "youtube", "facebook", "linkedin", "x", "all"]);
+
+function formatVariantForPlatform(target: Platform, adaptation: NonNullable<ReturnType<typeof parseAnalysis>["adaptation"]>) {
+  switch (target) {
+    case "tiktok": {
+      const caption = truncate(`${adaptation.hook}\n\n${adaptation.cta}`, 2100);
+      return {
+        caption,
+        hashtags: `${adaptation.hashtags} #fyp #viral`,
+        firstComment: "Drop a comment if you want part 2!",
+      };
+    }
+    case "youtube": {
+      const summary = adaptation.script_outline.map((b) => `- ${b.line}`).join("\n");
+      const caption = `${adaptation.hook}\n\n${adaptation.caption}\n\nKey takeaways:\n${summary}\n\n${adaptation.cta}`;
+      return {
+        caption,
+        hashtags: adaptation.hashtags,
+        firstComment: "What topic should we break down in our next Short?",
+      };
+    }
+    case "linkedin": {
+      const points = adaptation.script_outline.map((b) => `→ ${b.beat}: ${b.line}`).join("\n\n");
+      const caption = `${adaptation.hook}\n\nHere is what we discovered about ${adaptation.angle.toLowerCase()}:\n\n${points}\n\nThe lesson: ${adaptation.cta}\n\nWhat has your experience been with this approach?`;
+      return {
+        caption,
+        hashtags: adaptation.hashtags,
+        firstComment: "Read our full case breakdown in the brand knowledge base.",
+      };
+    }
+    case "x": {
+      const caption = truncate(`${adaptation.hook}\n\n${adaptation.cta}`, 275);
+      return {
+        caption,
+        hashtags: adaptation.hashtags.split(" ").slice(0, 2).join(" "),
+        firstComment: "Bookmark this post and follow for more.",
+      };
+    }
+    case "facebook": {
+      return {
+        caption: `${adaptation.hook}\n\n${adaptation.caption}\n\n${adaptation.cta}`,
+        hashtags: adaptation.hashtags,
+        firstComment: "Share your thoughts with us in the comments below!",
+      };
+    }
+    default: {
+      return {
+        caption: adaptation.caption,
+        hashtags: adaptation.hashtags,
+        firstComment: "Which part should we go deeper on? Tell us below.",
+      };
+    }
+  }
+}
 
 export async function deleteViralityAction(formData: FormData) {
   const user = await requireUser();
@@ -103,26 +158,33 @@ export async function createPostFromAnalysisAction(formData: FormData) {
      VALUES (?, ?, ?, ?, 'draft', NULL, NULL, NULL, NULL, 48, ?, ?)`,
     [postId, brand.id, title, idea, now, now]
   );
-  run(
-    `INSERT INTO post_variants (id, post_id, platform, caption, hashtags, first_comment, media_path, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
-    [
-      uuid(),
-      postId,
-      platform,
-      adaptation.caption,
-      adaptation.hashtags,
-      "Which part should we go deeper on? Tell us below.",
-      now,
-    ]
-  );
+
+  const targets: Platform[] = platform === "all" ? PLATFORM_ORDER : [platform as Platform];
+
+  for (const target of targets) {
+    const formatted = formatVariantForPlatform(target, adaptation);
+    run(
+      `INSERT INTO post_variants (id, post_id, platform, caption, hashtags, first_comment, media_path, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
+      [
+        uuid(),
+        postId,
+        target,
+        formatted.caption,
+        formatted.hashtags,
+        formatted.firstComment,
+        now,
+      ]
+    );
+  }
+
   logActivity({
     brandId: brand.id,
     userId: user.id,
     action: "Created post from teardown",
     entity: "post",
     entityId: postId,
-    detail: `${row.source_title} → ${platform}`,
+    detail: `${row.source_title} → ${platform === "all" ? "all channels" : platform}`,
   });
   revalidatePath("/virality");
   revalidatePath("/dashboard");
