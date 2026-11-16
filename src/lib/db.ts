@@ -344,6 +344,13 @@ function migrate(db: SqliteDb) {
       confidence TEXT,
       error TEXT,
       source_deleted_at TEXT,
+      test_status TEXT NOT NULL DEFAULT 'planned',
+      test_a_value REAL,
+      test_b_value REAL,
+      test_winner TEXT,
+      test_notes TEXT NOT NULL DEFAULT '',
+      test_started_at TEXT,
+      test_completed_at TEXT,
       created_by TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -366,6 +373,16 @@ function migrate(db: SqliteDb) {
   addColumnIfMissing(db, "assets", "storage_provider", "TEXT NOT NULL DEFAULT 'local'");
   addColumnIfMissing(db, "assets", "upload_status", "TEXT NOT NULL DEFAULT 'ready'");
   addColumnIfMissing(db, "assets", "upload_id", "TEXT");
+
+  // Test log for a Virality Lab brief. A brief can be planned, running or
+  // complete; the result feeds the per-brand test-outcome summary.
+  addColumnIfMissing(db, "virality_analyses", "test_status", "TEXT NOT NULL DEFAULT 'planned'");
+  addColumnIfMissing(db, "virality_analyses", "test_a_value", "REAL");
+  addColumnIfMissing(db, "virality_analyses", "test_b_value", "REAL");
+  addColumnIfMissing(db, "virality_analyses", "test_winner", "TEXT");
+  addColumnIfMissing(db, "virality_analyses", "test_notes", "TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing(db, "virality_analyses", "test_started_at", "TEXT");
+  addColumnIfMissing(db, "virality_analyses", "test_completed_at", "TEXT");
 }
 
 function addColumnIfMissing(db: SqliteDb, table: string, column: string, definition: string) {

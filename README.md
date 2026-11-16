@@ -75,7 +75,10 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 - **Output:** hook and device; timed structure with visual, audio and on-screen evidence; pacing; CTA; why-it-likely-worked hypotheses with evidence; risks and limits; adaptation angle; script; shots; caption; CTA; approved facts used; guardrails; a two-variant test plan.
 - **Wording check:** compares 4-word sequences in the draft with the source, reports the share of copied words, and lists the phrases. Safe is under 8%, watch is 8–20%, rewrite is over 20%; when there is no source text it says "Not compared" instead of claiming 0%.
 - **Source handling:** an uploaded clip is deleted from this app's storage as soon as the teardown is saved; frames and the written record remain. Gemini files are deleted immediately after the read.
-- **Turn it into a post:** "Create draft post" writes a real draft with the caption and first comment; nothing publishes.
+- **Turn it into a post:** "Create draft" writes a real draft with the caption and first comment; choose one channel or **All channels** for platform-native variants. Nothing publishes.
+- **Brief export:** a two-page branded PDF with the hook, structure, hypotheses, script, shots, CTA and test plan. It includes a logged test result when there is one.
+- **Test log:** mark the two-variant test planned, running or complete; enter A/B results, a winner and a note. The lab calculates the relative difference, feeds the winner into the per-brand test outcomes, and includes the result in the PDF.
+- **Composer link:** the composer shows the latest proven blueprints with a direct link back to the teardown.
 - **Samples:** each seeded brand has an illustrative sample teardown. It is labelled, fictional, and its price is re-grounded against the brand's current approved price when loaded.
 - Full method, limits and test steps: [docs/VIRALITY-LAB.md](docs/VIRALITY-LAB.md).
 

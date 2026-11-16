@@ -191,3 +191,63 @@ export async function createPostFromAnalysisAction(formData: FormData) {
   revalidatePath("/calendar");
   redirect(`/posts/${postId}?created=1`);
 }
+
+function metricValue(value: FormDataEntryValue | null): number | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const number = Number(raw);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+export async function saveViralityTestAction(formData: FormData) {
+  const user = await requireUser();
+  const brand = await getActiveBrand();
+  const id = String(formData.get("id") ?? "");
+  const row = id ? getAnalysisForBrand(id, brand.id) : undefined;
+  if (!row) redirect("/virality");
+
+  const statusValue = String(formData.get("status") ?? "planned");
+  const status = ["planned", "running", "complete"].includes(statusValue)
+    ? (statusValue as "planned" | "running" | "complete")
+    : "planned";
+  const aValue = metricValue(formData.get("aValue"));
+  const bValue = metricValue(formData.get("bValue"));
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 1000);
+
+  let winner = String(formData.get("winner") ?? "").trim().toLowerCase();
+  if (!["a", "b", "tie"].includes(winner)) {
+    winner = "";
+  }
+  if (!winner && aValue != null && bValue != null) {
+    winner = aValue > bValue ? "a" : bValue > aValue ? "b" : "tie";
+  }
+  if (status === "complete" && !winner) {
+    redirect(`/virality/${row.id}?error=Add the two results or choose a winner before completing the test.`);
+  }
+
+  const now = new Date().toISOString();
+  const startedAt = status === "planned" ? row.test_started_at : row.test_started_at ?? now;
+  const completedAt = status === "complete" ? row.test_completed_at ?? now : null;
+
+  run(
+    `UPDATE virality_analyses
+     SET test_status = ?, test_a_value = ?, test_b_value = ?, test_winner = ?, test_notes = ?,
+         test_started_at = ?, test_completed_at = ?, updated_at = ?
+     WHERE id = ?`,
+    [status, aValue, bValue, winner || null, notes, startedAt, completedAt, now, row.id]
+  );
+
+  logActivity({
+    brandId: brand.id,
+    userId: user.id,
+    action: status === "complete" ? "Logged Virality Lab test result" : "Updated Virality Lab test",
+    entity: "virality_analysis",
+    entityId: row.id,
+    detail: `${row.source_title || row.id} · ${status}${winner ? ` · winner ${winner.toUpperCase()}` : ""}`,
+  });
+
+  revalidatePath("/virality");
+  revalidatePath(`/virality/${row.id}`);
+  revalidatePath("/dashboard");
+  redirect(`/virality/${row.id}?test=1`);
+}

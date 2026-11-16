@@ -138,6 +138,13 @@ export type ViralityRow = {
   confidence: Confidence | null;
   error: string | null;
   source_deleted_at: string | null;
+  test_status: "planned" | "running" | "complete";
+  test_a_value: number | null;
+  test_b_value: number | null;
+  test_winner: "a" | "b" | "tie" | null;
+  test_notes: string;
+  test_started_at: string | null;
+  test_completed_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

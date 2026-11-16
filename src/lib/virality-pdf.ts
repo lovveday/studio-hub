@@ -294,8 +294,20 @@ export async function generateViralityPdf(
 
       // A/B Test box
       const bx2 = margin + halfW + 10;
-      doc.rect(bx2, y2, halfW, 76).fill("#FFFFFF");
-      doc.rect(bx2, y2, halfW, 76).stroke("#E4E0D6");
+      const testWinnerName =
+        analysis.test_winner === "a"
+          ? adaptation.test_plan.variant_a.name
+          : analysis.test_winner === "b"
+            ? adaptation.test_plan.variant_b.name
+            : analysis.test_winner === "tie"
+              ? "Tie"
+              : "";
+      const testResult =
+        analysis.test_status === "complete" && testWinnerName
+          ? `\nResult: ${truncate(testWinnerName, 24)} won${analysis.test_a_value != null && analysis.test_b_value != null ? ` (${analysis.test_a_value} vs ${analysis.test_b_value})` : ""}`
+          : "";
+      doc.rect(bx2, y2, halfW, 88).fill("#FFFFFF");
+      doc.rect(bx2, y2, halfW, 88).stroke("#E4E0D6");
       doc
         .fillColor("#6C675D")
         .font("Helvetica-Bold")
@@ -309,13 +321,13 @@ export async function generateViralityPdf(
           `Var A: ${truncate(adaptation.test_plan.variant_a.change, 40)}\nVar B: ${truncate(
             adaptation.test_plan.variant_b.change,
             40
-          )}\nMetric: ${adaptation.test_plan.metric} (${adaptation.test_plan.window})`,
+          )}\nMetric: ${adaptation.test_plan.metric} (${adaptation.test_plan.window})${testResult}`,
           bx2 + 10,
           y2 + 24,
           { width: halfW - 20 }
         );
 
-      y2 += 88;
+      y2 += 100;
 
       // Footer notice
       doc

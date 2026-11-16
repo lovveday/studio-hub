@@ -221,6 +221,19 @@ export default async function ViralityPage({
   const adapted = ready.filter((analysis) => analysis.adaptation);
   const comparable = adapted.filter((analysis) => analysis.similarity?.comparable !== false);
   const safe = comparable.filter((analysis) => analysis.similarity?.level === "low");
+  const completedTests = ready.filter(
+    (analysis) => analysis.test_status === "complete" && analysis.test_winner && analysis.adaptation
+  );
+  const testWins = new Map<string, number>();
+  for (const analysis of completedTests) {
+    if (!analysis.adaptation || !analysis.test_winner || analysis.test_winner === "tie") continue;
+    const variant =
+      analysis.test_winner === "a"
+        ? analysis.adaptation.test_plan.variant_a.name
+        : analysis.adaptation.test_plan.variant_b.name;
+    testWins.set(variant, (testWins.get(variant) ?? 0) + 1);
+  }
+  const winRows = [...testWins.entries()].sort((a, b) => b[1] - a[1]);
   const profile = getBrandProfile(brand.id);
   const facts = listFacts(brand.id);
   const approvedFacts = facts.filter((fact) => fact.status === "approved" && !fact.valid_to);
@@ -525,6 +538,32 @@ export default async function ViralityPage({
                     ))}
                   </div>
                 ) : null}
+
+                <div className="space-y-2 border-t border-line pt-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="eyebrow text-muted">Test outcomes</p>
+                    <p className="text-[11px] tabular-nums text-muted">
+                      {completedTests.length} complete
+                    </p>
+                  </div>
+                  {winRows.length ? (
+                    winRows.slice(0, 3).map(([name, count]) => (
+                      <div key={name} className="flex items-baseline justify-between gap-3">
+                        <p className="max-w-[70%] truncate text-[12px] font-semibold text-ink">
+                          {name}
+                        </p>
+                        <p className="text-[11px] tabular-nums text-muted">
+                          {count} {count === 1 ? "win" : "wins"}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[10px] leading-relaxed text-muted">
+                      No completed tests yet. Open a brief, run the two variants and log the closing
+                      numbers.
+                    </p>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-3 gap-2 border-t border-line pt-4">
                   <div>

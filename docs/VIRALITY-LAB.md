@@ -79,6 +79,19 @@ The score is the share of the *draft* that repeats the source in the same order.
 
 The score is a wording heuristic, not a plagiarism detector. It does not catch paraphrases, translated wording or visual copying.
 
+## Test log
+
+The two-variant plan is not just copy: it can be run and recorded on the teardown page.
+
+- **Status:** `planned` → `running` → `complete`.
+- **Inputs:** an A value, a B value, a winner and a short note. Leaving the winner empty auto-picks the higher number; override it when lower is better (for example cost per result).
+- **Result:** the page shows the winner, both values and the relative difference. A tie is a valid result.
+- **Library:** completed tests feed the **Test outcomes** block in the pattern library, grouped by the winning variant name.
+- **PDF:** the exported brief adds `Result: <variant> won (<A> vs <B>)` to the test box.
+- **Audit:** every save writes an activity-log entry.
+
+The result is user-entered, not scraped from a platform. A test can be edited or reopened; the lab does not pretend a test ran automatically.
+
 ## Source handling and privacy
 
 - Uploaded clips are written to `storage/virality/<id>/source.*`, sent to Gemini, and deleted from local storage after the teardown is saved.
@@ -122,6 +135,7 @@ GEMINI_MODEL_FALLBACKS=gemini-3.6-flash,gemini-3.1-flash-lite
 - identity: `id`, `brand_id`, `created_by`, timestamps;
 - source: `source_type`, `source_url`, `source_title`, `platform`, `creator`, `caption`, `transcript`, `duration_seconds`, `width`, `height`, `mime_type`, `file_path`, `poster_path`, `frames_json`, `metadata_json`, `source_deleted_at`;
 - output: `teardown_json`, `adaptation_json`, `similarity_json`, `mode`, `confidence`;
+- test log: `test_status`, `test_a_value`, `test_b_value`, `test_winner`, `test_notes`, `test_started_at`, `test_completed_at`;
 - job: `status` (`processing`/`ready`/`failed`), `stage`, `error`.
 
 Parsed types live in `src/lib/virality-types.ts`.
@@ -135,14 +149,15 @@ Parsed types live in `src/lib/virality-types.ts`.
 | `src/lib/virality-samples.ts` | Three illustrative, brand-specific sample teardowns |
 | `src/app/(app)/virality/page.tsx` | Library, patterns, guardrails |
 | `src/app/(app)/virality/new/page.tsx` | Input form and processing state |
-| `src/app/(app)/virality/[id]/page.tsx` | Teardown, evidence, brief, checks, test plan |
+| `src/app/(app)/virality/[id]/page.tsx` | Teardown, evidence, brief, checks, test log |
+| `src/lib/virality-pdf.ts` | Two-page PDF brief, including the logged test result |
 | `src/components/virality/new-teardown.tsx` | Upload/link/paste client, frame capture |
 | `src/components/virality/processing.tsx` | Stage poller |
 | `src/components/virality/beat-ruler.tsx` | Timed structure bar |
 | `src/components/virality/similarity-meter.tsx` | Wording-overlap gauge |
 | `src/components/virality/cover.tsx` | Real frame, remote thumbnail or typographic cover |
 | `src/app/api/virality/*` | Analyze, status, link metadata, frames |
-| `src/app/actions/virality.ts` | Delete, retry, rewrite, sample, create draft post |
+| `src/app/actions/virality.ts` | Delete, retry, rewrite, sample, create draft post, test log |
 
 ## Manual test checklist
 
@@ -152,15 +167,17 @@ Parsed types live in `src/lib/virality-types.ts`.
 4. Paste a script only; confirm the teardown is labelled `Transcript` and its pacing says it was estimated.
 5. Open a brief with no source text and confirm the wording check says `Not compared`, not 0%.
 6. Click **Create draft post** and confirm it lands on `/posts/<id>` as a draft with the caption and first comment.
-7. **Rewrite brief** and confirm the facts, guardrails and overlap score refresh.
-8. **Delete** a teardown and confirm the row and its storage directory are gone.
-9. Stop the server, set `GEMINI_API_KEY=` and repeat step 4; confirm the deterministic fallback still produces a brief and labels it `Template`.
-10. Switch brands and load a sample for Copper & Co and Northstar Fit; confirm the price and product change with the brand.
+7. In **Two-variant test**, enter A=4.8, B=3.9, status **Complete**, leave the winner empty and save. Confirm the winner auto-picks A, the banner shows the 23.1% difference, the library's **Test outcomes** shows 1 win, and the PDF includes the result.
+8. Reset the test fields to `planned` and confirm the library returns to "No completed tests yet".
+9. **Rewrite brief** and confirm the facts, guardrails and overlap score refresh.
+10. **Delete** a teardown and confirm the row and its storage directory are gone.
+11. Stop the server, set `GEMINI_API_KEY=` and repeat step 4; confirm the deterministic fallback still produces a brief and labels it `Template`.
+12. Switch brands and load a sample for Copper & Co and Northstar Fit; confirm the price and product change with the brand.
 
 ## Limits and next steps
 
 - A video read can take 30–90 seconds; a large upload can take several minutes. The job survives page navigation but not a server restart.
 - No ffmpeg: frame capture and pacing rely on the browser and Gemini. A dedicated media worker would make cuts, OCR and audio features measurable rather than inferred.
 - No comment, retention or revenue data, so "why it worked" stays a hypothesis.
-- No cross-brand pattern rollups yet; the pattern library is per brand.
-- No automatic draft variants for multiple platforms yet; the draft action creates one platform variant.
+- No cross-brand pattern rollups yet; the pattern library and test outcomes are per brand.
+- Draft generation is platform-formatted for one channel or all six; it does not yet attach the source media or schedule the post.

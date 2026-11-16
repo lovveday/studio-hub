@@ -7,7 +7,6 @@ import {
   Download,
   Film,
   FlaskConical,
-  Image as ImageIcon,
   Plus,
   RotateCcw,
   Trash2,
@@ -21,15 +20,19 @@ import {
   deleteViralityAction,
   regenerateBriefAction,
   retryViralityAction,
+  saveViralityTestAction,
 } from "@/app/actions/virality";
 import {
   Badge,
   Button,
   Card,
   CardHeader,
+  Field,
+  Input,
   Notice,
   PageHeader,
   Select,
+  Textarea,
   buttonClasses,
 } from "@/components/ui";
 import { CopyButton } from "@/components/copy-button";
@@ -96,7 +99,7 @@ export default async function TeardownPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ rewritten?: string; error?: string }>;
+  searchParams: Promise<{ rewritten?: string; test?: string; error?: string }>;
 }) {
   await requireUser();
   const brand = await getActiveBrand();
@@ -288,6 +291,27 @@ export default async function TeardownPage({
     ? teardown.hook.text.replace(/^Visual opening — /, "")
     : teardown.hook.text;
   const briefFallback = analysis.metadata.brief === "fallback";
+  const testStatus = row.test_status || "planned";
+  const testComplete = testStatus === "complete" && Boolean(row.test_winner);
+  const testRunning = testStatus === "running";
+  const testWinnerName =
+    row.test_winner === "a"
+      ? adaptation.test_plan.variant_a.name
+      : row.test_winner === "b"
+        ? adaptation.test_plan.variant_b.name
+        : row.test_winner === "tie"
+          ? "Tie"
+          : "";
+  const testLift =
+    row.test_a_value != null &&
+    row.test_b_value != null &&
+    row.test_winner &&
+    row.test_winner !== "tie" &&
+    Math.min(row.test_a_value, row.test_b_value) > 0
+      ? Math.abs(row.test_a_value - row.test_b_value) /
+        Math.min(row.test_a_value, row.test_b_value) *
+        100
+      : null;
 
 
   return (
@@ -357,6 +381,11 @@ export default async function TeardownPage({
 
       {query.rewritten ? (
         <Notice tone="success">Brief rewritten and checked against the source again.</Notice>
+      ) : null}
+      {query.test ? (
+        <Notice tone="success">
+          Test log saved. Results feed the per-brand test outcomes in the lab.
+        </Notice>
       ) : null}
       {query.error ? <Notice tone="error">{query.error}</Notice> : null}
       {row.mode === "sample" ? (
@@ -848,31 +877,45 @@ export default async function TeardownPage({
           <Card>
             <CardHeader
               title="Two-variant test"
-              description="One variable each, same structure."
-              action={<ImageIcon className="h-4 w-4 text-muted" />}
+              description="One variable each. Log the result when the window closes."
+              action={
+                <Badge tone={testComplete ? "teal" : testRunning ? "gold" : "neutral"}>
+                  {testComplete ? "Complete" : testRunning ? "Running" : "Planned"}
+                </Badge>
+              }
             />
             <div className="p-5">
               <div className="space-y-3">
-                {[
-                  ["A", adaptation.test_plan.variant_a],
-                  ["B", adaptation.test_plan.variant_b],
-                ].map(([letter, variant]) => {
-                  const item = variant as typeof adaptation.test_plan.variant_a;
-                  return (
-                    <div key={letter as string} className="rounded-xl border border-line p-3">
+                {(
+                  [
+                    { letter: "A", variant: adaptation.test_plan.variant_a, value: row.test_a_value },
+                    { letter: "B", variant: adaptation.test_plan.variant_b, value: row.test_b_value },
+                  ] as Array<{
+                    letter: string;
+                    variant: typeof adaptation.test_plan.variant_a;
+                    value: number | null;
+                  }>
+                ).map(({ letter, variant: item, value }) => (
+                  <div key={letter} className="rounded-xl border border-line p-3">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[9px] font-bold text-paper">
-                          {letter as string}
+                          {letter}
                         </span>
                         <p className="text-[11px] font-semibold text-ink">{item.name}</p>
                       </div>
-                      <p className="mt-1.5 text-[10px] leading-relaxed text-ink/70">{item.change}</p>
-                      <p className="mt-1 text-[10px] leading-relaxed text-muted">
-                        Hypothesis: {item.hypothesis}
-                      </p>
+                      {value != null ? (
+                        <span className="text-[10px] font-semibold tabular-nums text-ink">
+                          {value}
+                        </span>
+                      ) : null}
                     </div>
-                  );
-                })}
+                    <p className="mt-1.5 text-[10px] leading-relaxed text-ink/70">{item.change}</p>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted">
+                      Hypothesis: {item.hypothesis}
+                    </p>
+                  </div>
+                ))}
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 border-t border-line pt-3">
                 <div>
@@ -888,6 +931,96 @@ export default async function TeardownPage({
                   </p>
                 </div>
               </div>
+
+              {testComplete ? (
+                <div className="mt-3 rounded-xl bg-teal-soft p-3">
+                  <p className="text-[11px] font-semibold text-[#086b6b]">
+                    {row.test_winner === "tie" ? "The variants tied." : `${testWinnerName} won.`}
+                  </p>
+                  <p className="mt-0.5 text-[10px] leading-relaxed text-[#086b6b]/80">
+                    A {row.test_a_value ?? "—"} · B {row.test_b_value ?? "—"}
+                    {testLift != null ? ` · ${testLift.toFixed(1)}% difference` : ""}
+                  </p>
+                  {row.test_notes ? (
+                    <p className="mt-1 text-[10px] leading-relaxed text-[#086b6b]/80">
+                      {row.test_notes}
+                    </p>
+                  ) : null}
+                </div>
+              ) : testRunning ? (
+                <p className="mt-3 rounded-xl bg-gold-soft px-3 py-2 text-[10px] leading-relaxed text-[#7a5116]">
+                  Test running. Add the closing numbers when {adaptation.test_plan.window} is up.
+                </p>
+              ) : null}
+
+              <form action={saveViralityTestAction} className="mt-4 space-y-3 border-t border-line pt-3">
+                <input type="hidden" name="id" value={row.id} />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="eyebrow text-muted">Test log</p>
+                  <p className="truncate text-[9px] text-muted">{adaptation.test_plan.metric}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="A result" htmlFor="test-a-value">
+                    <Input
+                      id="test-a-value"
+                      name="aValue"
+                      type="number"
+                      min="0"
+                      step="any"
+                      defaultValue={row.test_a_value ?? ""}
+                      placeholder="e.g. 4.8"
+                    />
+                  </Field>
+                  <Field label="B result" htmlFor="test-b-value">
+                    <Input
+                      id="test-b-value"
+                      name="bValue"
+                      type="number"
+                      min="0"
+                      step="any"
+                      defaultValue={row.test_b_value ?? ""}
+                      placeholder="e.g. 3.9"
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field
+                    label="Winner"
+                    htmlFor="test-winner"
+                    hint="Auto picks the higher number; override if lower is better."
+                  >
+                    <Select id="test-winner" name="winner" defaultValue={row.test_winner ?? ""}>
+                      <option value="">Auto from results</option>
+                      <option value="a">{adaptation.test_plan.variant_a.name}</option>
+                      <option value="b">{adaptation.test_plan.variant_b.name}</option>
+                      <option value="tie">Tie</option>
+                    </Select>
+                  </Field>
+                  <Field label="Status" htmlFor="test-status">
+                    <Select id="test-status" name="status" defaultValue={testStatus}>
+                      <option value="planned">Planned</option>
+                      <option value="running">Running</option>
+                      <option value="complete">Complete</option>
+                    </Select>
+                  </Field>
+                </div>
+                <Field
+                  label="What happened"
+                  htmlFor="test-notes"
+                  hint="One line the next brief can learn from."
+                >
+                  <Textarea
+                    id="test-notes"
+                    name="notes"
+                    defaultValue={row.test_notes}
+                    placeholder="e.g. Hook-first held 3 seconds longer and doubled saves."
+                    className="min-h-16"
+                  />
+                </Field>
+                <Button type="submit" variant="outline" size="sm">
+                  Save test result
+                </Button>
+              </form>
             </div>
           </Card>
 

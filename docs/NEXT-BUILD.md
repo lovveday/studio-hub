@@ -109,11 +109,12 @@ Why: understand why another creator’s video worked and adapt the structure saf
 - Pipeline: probe → transcript → OCR keyframes → scene/pacing → audio features → metrics where available. ✅ Gemini video/File API, captured-frame vision fallback, deterministic text fallback; no ffmpeg or platform metrics yet.
 - Output: hook (0–3s), structure timeline, keywords/entities, hashtags, CTA, length, posting time, “why it likely worked” hypotheses with evidence. ✅ hook, timed structure, evidence-linked hypotheses, CTA, keywords/hashtags; posting time stays in the separate Best Time engine.
 - Adaptation brief: same structure, new brand angle, script outline, shot list, CTA; similarity check against the source. ✅ grounded in approved facts, with guardrails and a 4-gram wording-overlap check.
-- Keyword extraction and a pattern library per niche. ✅ per brand: hook devices, asks, runtime/beats/safe count.
+- Keyword extraction and a pattern library per niche. ✅ per brand: hook devices, asks, runtime/beats/safe count, plus completed test outcomes.
+- Delivery: PDF brief export, per-channel or omnichannel draft creation, composer blueprint links. ✅
 - Best posting time is a separate engine, not inferred from one viral video. ✅
 - No downloading/reposting third-party video; delete source after analysis. ✅ links are metadata-only; uploads are deleted after the teardown.
 
-Done when: a video produces a cited teardown + a brand-safe adaptation brief + a 2-variant test plan. ✅ See [VIRALITY-LAB.md](VIRALITY-LAB.md).
+Done when: a video produces a cited teardown + a brand-safe adaptation brief + a 2-variant test plan that can be logged and fed back into the library. ✅ See [VIRALITY-LAB.md](VIRALITY-LAB.md).
 
 ### 9. Best Time Engine — P1
 Why: schedule when the audience is actually there.
