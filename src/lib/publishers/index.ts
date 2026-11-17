@@ -11,6 +11,11 @@ import {
 import { safeJson } from "../utils";
 import { MockAdapter } from "./mock";
 import type { PublishResult } from "./types";
+import {
+  providerProfileForBrand,
+  publishViaUploadPost,
+  uploadPostConfigured,
+} from "../providers/uploadpost";
 
 type PublishSummary = {
   published: number;
@@ -25,6 +30,8 @@ function insertAttempt(input: {
   platform: string;
   accountId: string | null;
   result: PublishResult;
+  request?: unknown;
+  response?: unknown;
 }) {
   run(
     `INSERT INTO publish_attempts
@@ -39,11 +46,42 @@ function insertAttempt(input: {
       input.result.externalId ?? null,
       input.result.externalUrl ?? null,
       input.result.error ?? null,
-      JSON.stringify({ platform: input.platform }),
-      JSON.stringify({ status: input.result.status, externalId: input.result.externalId ?? null }),
+      JSON.stringify(input.request ?? { platform: input.platform }),
+      JSON.stringify(
+        input.response ?? {
+          status: input.result.status,
+          externalId: input.result.externalId ?? null,
+        }
+      ),
       new Date().toISOString(),
     ]
   );
+}
+
+function finishPost(
+  postId: string,
+  summary: PublishSummary,
+  brandId: string,
+  userId: string | null,
+  detail: string
+) {
+  const now = new Date().toISOString();
+  if (summary.failed > 0) {
+    run("UPDATE posts SET status = 'failed', updated_at = ? WHERE id = ?", [now, postId]);
+  } else if (summary.published > 0 && summary.assisted === 0) {
+    run("UPDATE posts SET status = 'published', updated_at = ? WHERE id = ?", [now, postId]);
+  } else if (summary.published > 0 || summary.assisted > 0) {
+    run("UPDATE posts SET status = 'ready', updated_at = ? WHERE id = ?", [now, postId]);
+  }
+
+  logActivity({
+    brandId,
+    userId,
+    action: "Publisher ran",
+    entity: "post",
+    entityId: postId,
+    detail: `${summary.published} published · ${summary.assisted} assisted · ${summary.failed} failed${detail}`,
+  });
 }
 
 /**
@@ -66,6 +104,84 @@ export async function publishPost(postId: string, userId: string | null): Promis
     total: variants.length,
     results: [],
   };
+
+  const provider = providerProfileForBrand(post.brand_id);
+  if (provider && uploadPostConfigured()) {
+    const pending = variants.filter((variant) => !getPublishedAttempt(postId, variant.platform));
+    if (pending.length === 0) {
+      for (const variant of variants) {
+        summary.published += 1;
+        summary.results.push({ platform: variant.platform, status: "published" });
+      }
+    } else {
+      try {
+        const outcome = await publishViaUploadPost({
+          post,
+          variants: pending,
+          assets,
+          profile: provider,
+        });
+        for (const variant of variants) {
+          if (!pending.some((item) => item.id === variant.id)) {
+            summary.published += 1;
+            summary.results.push({ platform: variant.platform, status: "published" });
+            continue;
+          }
+          const result = outcome.results.get(variant.platform) ?? {
+            status: "assisted_required" as const,
+            error: "Upload-Post did not return a result for this platform. Use the assisted kit.",
+          };
+          insertAttempt({
+            postId,
+            platform: variant.platform,
+            accountId: null,
+            result,
+            request: {
+              provider: "uploadpost",
+              profile: provider.profile_username,
+              requestId: outcome.requestId,
+            },
+            response: {
+              status: result.status,
+              externalId: result.externalId ?? null,
+              usage: outcome.usage ?? null,
+              error: result.error ?? outcome.error ?? null,
+            },
+          });
+          if (result.status === "published") summary.published += 1;
+          else if (result.status === "failed") summary.failed += 1;
+          else summary.assisted += 1;
+          summary.results.push({
+            platform: variant.platform,
+            status: result.status,
+            error: result.error,
+          });
+        }
+      } catch (error) {
+        for (const variant of pending) {
+          const result: PublishResult = {
+            status: "assisted_required",
+            error: `Upload-Post failed: ${(error as Error).message}`,
+          };
+          insertAttempt({
+            postId,
+            platform: variant.platform,
+            accountId: null,
+            result,
+            request: { provider: "uploadpost", profile: provider.profile_username },
+          });
+          summary.assisted += 1;
+          summary.results.push({
+            platform: variant.platform,
+            status: result.status,
+            error: result.error,
+          });
+        }
+      }
+    }
+    finishPost(postId, summary, post.brand_id, userId, " · uploadpost");
+    return summary;
+  }
 
   for (const variant of variants) {
     const existing = getPublishedAttempt(postId, variant.platform);
@@ -91,7 +207,7 @@ export async function publishPost(postId: string, userId: string | null): Promis
     if (!metadata.mock) {
       const result: PublishResult = {
         status: "assisted_required",
-        error: "The real adapter is not enabled yet. Use the assisted post kit.",
+        error: "No automatic publisher is connected for this channel. Use the assisted kit.",
       };
       insertAttempt({
         postId,
@@ -125,23 +241,6 @@ export async function publishPost(postId: string, userId: string | null): Promis
     }
   }
 
-  const now = new Date().toISOString();
-  if (summary.failed > 0) {
-    run("UPDATE posts SET status = 'failed', updated_at = ? WHERE id = ?", [now, postId]);
-  } else if (summary.published > 0 && summary.assisted === 0) {
-    run("UPDATE posts SET status = 'published', updated_at = ? WHERE id = ?", [now, postId]);
-  } else if (summary.published > 0 || summary.assisted > 0) {
-    run("UPDATE posts SET status = 'ready', updated_at = ? WHERE id = ?", [now, postId]);
-  }
-
-  logActivity({
-    brandId: post.brand_id,
-    userId,
-    action: "Publisher ran",
-    entity: "post",
-    entityId: postId,
-    detail: `${summary.published} published · ${summary.assisted} assisted · ${summary.failed} failed`,
-  });
-
+  finishPost(postId, summary, post.brand_id, userId, "");
   return summary;
 }

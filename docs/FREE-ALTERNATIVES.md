@@ -302,7 +302,7 @@ Keep the existing `META_APP_*`, `GOOGLE_*`, `LINKEDIN_*`, `X_*`, `TIKTOK_*` vars
 6. **Token/connection state:** store provider profile key + connected platforms per brand; mark `needs_reconnect` when a call returns a reauth error (Upload-Post uses stable `error_code` values such as `tiktok_reconnect_required`, `reauth_required`), and pause that platform's scheduled posts.
 7. **Assisted fallback:** if `SOCIAL_PROVIDER=assisted` or the capability is missing, return the existing copy/open/mark-posted kit. Same interface, no silent failures.
 
-No code changes were made in this task; this is the integration design for whoever implements it.
+**Implementation status:** the Upload-Post adapter described here is now built in `src/lib/providers/uploadpost.ts`, with profile mapping, free-tier quota tracking, batched multi-platform uploads and per-platform assisted fallback. Setup and limits: [UPLOAD-POST.md](./UPLOAD-POST.md).
 
 ### 5. What the owner can do today, for free, with zero approvals
 
@@ -324,7 +324,7 @@ No code changes were made in this task; this is the integration design for whoev
 | Prove it before spending anything | **Upload-Post Free** | $0 | 10 uploads/mo, 2 profiles, API included — everything except TikTok |
 | Growing past ~10 client accounts | **Zernio** | $6/account → $3/account at 11+ | Feature-complete, per-account pricing, X passed through at cost |
 | Client demands a mature, established vendor | **Ayrshare Premium** | ~$149 | Best-documented moderation API; expensive, no free plan |
-| Owner insists on self-hosting | **Postiz self-host** | hosting only | Best open-source coverage, but **you** own every app review |
+| Owner insists on self-hosting | **Postiz self-host** | hosting only | Best open-source coverage, but **you** own every app review; now optional, since Upload-Post covers publishing |
 | Zero spend, zero approvals, today | **Assisted mode** + YouTube test users + LinkedIn personal + X credits | ~$1–5 | Compliant, immediate, no vendor risk |
 
 ---

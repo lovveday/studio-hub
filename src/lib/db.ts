@@ -356,6 +356,31 @@ function migrate(db: SqliteDb) {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS provider_profiles (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL DEFAULT 'uploadpost',
+      profile_username TEXT NOT NULL,
+      display_name TEXT NOT NULL DEFAULT '',
+      connected_platforms_json TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'connected',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(brand_id, provider),
+      UNIQUE(provider, profile_username)
+    );
+
+    CREATE TABLE IF NOT EXISTS provider_usage (
+      provider TEXT NOT NULL,
+      period TEXT NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      limit_value INTEGER NOT NULL DEFAULT 10,
+      last_reset TEXT,
+      exhausted INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY(provider, period)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_posts_brand_date ON posts(brand_id, scheduled_at);
     CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
     CREATE INDEX IF NOT EXISTS idx_knowledge_brand ON knowledge_items(brand_id, created_at);
@@ -367,6 +392,7 @@ function migrate(db: SqliteDb) {
     CREATE INDEX IF NOT EXISTS idx_publish_attempts_post ON publish_attempts(post_id, platform);
     CREATE INDEX IF NOT EXISTS idx_oauth_states_expiry ON oauth_states(expires_at);
     CREATE INDEX IF NOT EXISTS idx_virality_brand ON virality_analyses(brand_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_provider_profiles_brand ON provider_profiles(brand_id, provider);
   `);
 
   // Non-destructive upgrades for databases created before media uploads existed.

@@ -52,10 +52,11 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 - Settings shows real connections, reconnect/disconnect, and a **Connect demo accounts** button that creates a demo Facebook Page + Instagram account.
 - Asset library: upload images/video/audio up to **300 MB**, with direct-to-R2 multipart when configured and an 8 MB local chunk fallback in development. Preview, download, remove, alt text. See [docs/UPLOADS.md](docs/UPLOADS.md).
 - Mock publisher: `Run publisher` on a post creates per-platform publish attempts. Demo accounts publish immediately; channels without an account remain assisted tasks. The worker calls the same publisher for due posts.
-- Real adapters are deliberately gated: non-mock accounts currently create an `assisted_required` attempt with a clear message instead of pretending to publish.
+- **Automatic publishing:** an optional Upload-Post adapter handles real posting with one API key and no app reviews. It batches all supported platforms of a post into one upload, maps per-platform results, and falls back to the assisted kit for TikTok on Free, unconnected platforms, unsupported media, or after the monthly free limit. Configure it in **Settings → Automatic publishing**. See [docs/UPLOAD-POST.md](docs/UPLOAD-POST.md).
+- Direct platform adapters remain gated: without Upload-Post, non-mock accounts create an `assisted_required` attempt with a clear message instead of pretending to publish.
 - Meta requires an HTTPS callback; set `APP_URL` to a tunnel or deployed URL. The Settings channel card shows the current callback base and warns when it is still localhost.
 - Public `/privacy`, `/terms`, `/data-deletion` and the Meta data-deletion/deauthorize callbacks are in place for app review.
-- Docker + Caddy deployment files are included: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+- Docker + Caddy deployment files are included: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Postiz is now optional; see [docs/POSTIZ-ZERO-BUDGET.md](docs/POSTIZ-ZERO-BUDGET.md#do-we-still-need-postiz).
 
 ### Composer + post detail
 - One brief → per-platform variants for Facebook, Instagram, TikTok, X, LinkedIn and YouTube.
@@ -144,13 +145,14 @@ Copy `.env.example` to `.env.local`. Never commit `.env.local` or paste real key
 - `APP_URL` is the base for OAuth callbacks and approval links. Meta requires HTTPS, so use a tunnel or deployed URL; Google accepts localhost.
 - `APP_ENCRYPTION_KEY` is required before storing real OAuth tokens. Generate a long random value.
 - Platform app IDs/secrets are optional until you connect a real account.
+- `UPLOADPOST_API_KEY`, `UPLOADPOST_PLAN` (`free`/`paid`) and `UPLOADPOST_FREE_LIMIT` enable automatic publishing without app reviews. See [docs/UPLOAD-POST.md](docs/UPLOAD-POST.md).
 - `META_LOGIN_CONFIG_ID` is optional; when set, Meta uses the Facebook Login for Business configuration instead of a raw scope list.
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` enable 300 MB direct multipart uploads. Without them, the local chunk fallback is used.
 - `DOMAIN` is used by Caddy in Docker; `SUPPORT_EMAIL` is shown on the privacy/terms/data-deletion pages.
 
 ## Known limits / next slice
 
-- OAuth foundation and the mock publisher are built. Real Meta/YouTube/LinkedIn/X/TikTok adapters are not enabled yet; non-mock accounts produce assisted attempts. The next slice is the Meta (Facebook + Instagram) and YouTube adapters, then LinkedIn/X/TikTok.
+- **Automatic publishing** is available through the optional Upload-Post adapter: one API key, no app reviews, 10 free uploads/month, 2 profiles, no TikTok on Free. After the limit, every target falls back to assisted mode. Direct Meta/YouTube/LinkedIn/X/TikTok adapters remain optional; without Upload-Post they produce assisted attempts.
 - Meta rejects a localhost callback. Use a tunnel (ngrok/cloudflared) or deploy first; the Settings page shows the exact callback base it will send.
 - Auto-like/auto-reply is modelled in the UI and data model but not executed against platforms. Instagram and LinkedIn support comment likes; YouTube does not expose a comment-like API; TikTok is partner-gated and its audit may reject an internal agency tool.
 - Binary doc parsing (PDF/DOCX/HTML) works server-side; image OCR needs a Gemini key. Scanned PDFs without a text layer need OCR later.

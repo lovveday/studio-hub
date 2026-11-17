@@ -234,3 +234,25 @@ export type PublishAttempt = {
   response_json: string;
   created_at: string;
 };
+
+export type ProviderProfile = {
+  id: string;
+  brand_id: string;
+  provider: string;
+  profile_username: string;
+  display_name: string;
+  connected_platforms_json: string;
+  status: "connected" | "needs_reconnect" | "disconnected";
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProviderUsage = {
+  provider: string;
+  period: string;
+  used: number;
+  limit_value: number;
+  last_reset: string | null;
+  exhausted: number;
+  updated_at: string;
+};

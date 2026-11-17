@@ -42,6 +42,22 @@ Use **Postiz as the scheduler/publishing base** and keep **Studio Hub as the com
 - AI: Gemini free tier in Studio Hub; Postiz AI is OpenAI-first.
 - Social: direct free apps for Meta/YouTube/LinkedIn; assisted for X/TikTok; Make only as a conditional bridge.
 
+## Do we still need Postiz?
+
+**For the core loop: no.** Studio Hub now has the composer, calendar, approvals, assets, reports and a direct publishing path through Upload-Post ([UPLOAD-POST.md](UPLOAD-POST.md)). Postiz would duplicate the scheduler and add Postgres, Redis, Temporal, Docker and AGPL obligations — and it still does **not** remove the social app requirements.
+
+Keep Postiz optional only if you want:
+
+- a separate, more mature multi-platform scheduling UI;
+- its team/workspace features;
+- a second publishing path independent of Studio Hub.
+
+The zero-approval path is: **Upload-Post automatic publishing while the free credits last → assisted kit after the monthly limit**. The hub's own calendar remains the source of truth.
+
+### GitHub Codespaces
+
+Codespaces does **not** need your laptop to be on, but it is **not an always-on server**: a codespace stops when idle (default 30 minutes; you can raise the timeout, but it still stops) and consumes a limited monthly core-hour allowance. It is fine for a short Postiz spike or a build, not for a scheduler that must publish at 09:00 while you are offline. If Postiz ever becomes necessary for production, use Oracle Always Free ARM or a small VPS, not Codespaces.
+
 ## Deployment kit
 
 The sibling folder `C:\Users\23481\Documents\coding\postiz-spike` contains:

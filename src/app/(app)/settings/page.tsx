@@ -33,6 +33,12 @@ import { r2Configured } from "@/lib/storage";
 import { PLATFORM_ORDER, platformMeta } from "@/lib/platforms";
 import { fileSize, safeJson } from "@/lib/utils";
 import {
+  listProviderProfiles,
+  providerProfileForBrand,
+  providerUsage,
+  uploadPostConfigured,
+} from "@/lib/providers/uploadpost";
+import {
   createBrandAction,
   inviteUserAction,
   updateBrandBasicsAction,
@@ -40,6 +46,7 @@ import {
 } from "@/app/actions/brand";
 import { disconnectChannelAction } from "@/app/actions/channels";
 import { runRetentionAction, saveRetentionAction } from "@/app/actions/settings";
+import { ProviderSettings } from "@/components/provider-settings";
 import {
   Avatar,
   Badge,
@@ -69,6 +76,8 @@ export default async function SettingsPage({
     connected?: string;
     disconnected?: string;
     accounts?: string;
+    provider?: string;
+    providerMessage?: string;
   }>;
 }) {
   const user = await requireUser();
@@ -88,6 +97,9 @@ export default async function SettingsPage({
   const isLocalMeta = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
   const encryptionReady = isEncryptionConfigured();
   const r2Ready = r2Configured();
+  const providerProfile = providerProfileForBrand(brand.id);
+  const providerUse = providerUsage();
+  const providerProfiles = listProviderProfiles();
   const r2Public = Boolean(process.env.R2_PUBLIC_BASE_URL);
 
   function providerFor(platform: string): OAuthPlatform {
@@ -114,6 +126,17 @@ export default async function SettingsPage({
         </Notice>
       ) : null}
       {params.disconnected ? <Notice tone="info">Channel disconnected.</Notice> : null}
+      {params.providerMessage ? (
+        <Notice tone={params.provider === "error" ? "error" : "success"}>
+          {params.providerMessage}
+        </Notice>
+      ) : null}
+      {params.provider === "connected" && !params.providerMessage ? (
+        <Notice tone="info">
+          Back from Upload-Post. Press <strong>Refresh</strong> in Automatic publishing to pull the
+          connected channels.
+        </Notice>
+      ) : null}
       {params.error ? <Notice tone="error">{params.error}</Notice> : null}
       {params.retentionDryRun ? (
         <Notice tone="info">
@@ -207,6 +230,14 @@ export default async function SettingsPage({
               </Button>
             </form>
           </Card>
+
+          <ProviderSettings
+            brand={brand}
+            profile={providerProfile}
+            usage={providerUse}
+            configured={uploadPostConfigured()}
+            profilesCount={providerProfiles.length}
+          />
 
           <Card>
             <CardHeader

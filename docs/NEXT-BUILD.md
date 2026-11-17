@@ -66,6 +66,8 @@ Order:
 
 Done when: an approved Page/IG/YouTube channel publishes a real post + first comment, and failures show a reconnect/retry path.
 
+**Alternative already built:** the Upload-Post adapter (`src/lib/providers/uploadpost.ts`, [UPLOAD-POST.md](UPLOAD-POST.md)) publishes to all six supported networks through one API key, with no app reviews. It is the practical path while approvals are unavailable. Direct adapters remain useful later for deeper comment/analytics control.
+
 ### 5. Engagement watcher + inbox automation — P0, after one publisher
 Why: “reply to the first 5 comments and like them while I’m offline” is the core promise.
 
@@ -166,9 +168,9 @@ Done when: weekly/monthly PPTX/PDF is generated from live data with no manual ex
 
 ## Recommended immediate slice
 
-**Meta + YouTube real adapters → first comment → engagement watcher.** Items 1–3 are already done; item 4 is now the critical path. Meta needs an HTTPS callback (`APP_URL` tunnel or deployed URL), so the app can be built and tested with the mock provider until that is in place.
+**Publishing path:** the Upload-Post adapter is built and is the no-approval automatic path: 10 free uploads/month, 2 profiles, no TikTok on Free, then assisted fallback. Direct Meta + YouTube adapters remain optional; use them later if you need native comment/analytics depth.
 
-The no-key track now has WhatsApp intake, Market Pulse and the **Virality Lab** (item 8) built. The next no-key additions are a Postiz API client, best-time confidence labels, and an ffmpeg media worker for measured cuts/OCR rather than inferred ones.
+**Next feature slice:** connect Upload-Post profiles in Settings, validate a real multi-platform post, then add webhook comment ingestion and analytics sync. The no-key product track still has best-time confidence labels and an ffmpeg media worker for measured cuts/OCR.
 
 ## Blocked by external approvals
 
