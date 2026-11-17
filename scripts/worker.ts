@@ -1,3 +1,4 @@
+import "./load-env";
 import crypto from "node:crypto";
 import { all, get, run } from "../src/lib/db";
 import { publishPost } from "../src/lib/publishers";

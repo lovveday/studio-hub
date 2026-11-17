@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Mic, Sparkles } from "lucide-react";
-import { getSessionUser } from "@/lib/auth";
+import { demoLoginEnabled, getSessionUser } from "@/lib/auth";
 import { demoLoginAction, loginAction } from "@/app/actions/auth";
 import { Button, Input, Notice } from "@/components/ui";
+import { Signature } from "@/components/signature";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function LoginPage({
   const user = await getSessionUser();
   if (user) redirect("/dashboard");
   const params = await searchParams;
+  const showDemo = demoLoginEnabled();
 
   return (
     <main className="grid min-h-dvh bg-paper lg:grid-cols-[1.05fr_0.95fr]">
@@ -93,7 +95,7 @@ export default async function LoginPage({
                 name="email"
                 type="email"
                 autoComplete="email"
-                defaultValue="owner@studio.local"
+                defaultValue={showDemo ? "owner@studio.local" : ""}
                 placeholder="you@studio.com"
                 required
               />
@@ -107,7 +109,7 @@ export default async function LoginPage({
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                defaultValue="password123"
+                defaultValue={showDemo ? "password123" : ""}
                 placeholder="••••••••"
                 required
               />
@@ -118,23 +120,28 @@ export default async function LoginPage({
             </Button>
           </form>
 
-          <div className="mt-5 rounded-2xl border border-line bg-cream/40 p-4">
-            <p className="text-[11px] font-semibold text-ink/70">Demo workspace</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted">
-              `owner@studio.local` · `password123` — seeded with three brands, 12 posts, 35 days of
-              metrics, comments and a WhatsApp voice note.
-            </p>
-            <form action={demoLoginAction} className="mt-3">
-              <Button type="submit" variant="outline" size="sm" className="w-full">
-                Open the demo workspace
-              </Button>
-            </form>
-          </div>
+          {showDemo ? (
+            <div className="mt-5 rounded-2xl border border-line bg-cream/40 p-4">
+              <p className="text-[11px] font-semibold text-ink/70">Demo workspace</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted">
+                `owner@studio.local` · `password123` — seeded with three brands, 12 posts, 35 days of
+                metrics, comments and a WhatsApp voice note.
+              </p>
+              <form action={demoLoginAction} className="mt-3">
+                <Button type="submit" variant="outline" size="sm" className="w-full">
+                  Open the demo workspace
+                </Button>
+              </form>
+            </div>
+          ) : null}
 
           <p className="mt-8 text-[10px] leading-relaxed text-muted/70">
-            Local-first demo. No platform API keys are connected yet, so publishing runs in assisted
-            mode. AI falls back to demo templates until `GEMINI_API_KEY` is set.
+            Local-first demo. Publishing uses Upload-Post when configured, otherwise assisted mode.
+            AI falls back to demo templates until `GEMINI_API_KEY` is set.
           </p>
+          <div className="mt-4">
+            <Signature />
+          </div>
         </div>
       </section>
     </main>

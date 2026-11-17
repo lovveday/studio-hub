@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
   applicationName: "Studio Hub",
+  authors: [{ name: "Osekhuemen Peter-imoisili" }],
+  creator: "Osekhuemen Peter-imoisili",
+  publisher: "Osekhuemen Peter-imoisili",
   title: "Studio Hub — social media command center",
   description:
     "Plan, create, approve, schedule, publish and report across every client brand — with a knowledge inbox that turns voice notes into brand facts.",

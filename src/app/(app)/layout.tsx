@@ -11,6 +11,7 @@ import { aiStatus } from "@/lib/ai";
 import { NavLinks } from "@/components/nav";
 import { BrandSwitcher } from "@/components/brand-switcher";
 import { NotificationMenu } from "@/components/notification-menu";
+import { Signature } from "@/components/signature";
 import { Avatar } from "@/components/ui";
 import { logoutAction } from "@/app/actions/auth";
 
@@ -125,6 +126,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {children}
+          <footer className="mt-10 flex justify-end border-t border-line pt-4">
+            <Signature />
+          </footer>
         </main>
       </div>
     </div>

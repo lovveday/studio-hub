@@ -88,6 +88,19 @@ A small always-on VPS is the path with the least rewrite:
 
 This keeps SQLite and local storage, which is fine for a small agency. Add nightly backups of `data/` and `storage/`.
 
+### Will a scheduled post publish while my laptop is off?
+
+**Locally: no.** The web app does not publish on its own. `scripts/worker.ts` runs every 60 seconds, finds posts whose `scheduled_at` has passed, and calls the publisher. If your laptop, the web process or the worker is stopped, the post stays `scheduled`; when the worker starts again it will publish late.
+
+**On an always-on VPS: yes.** The bundled `docker-compose.yml` runs two containers from the same image:
+
+- `app` — Next.js;
+- `worker` — the scheduler/publisher.
+
+Both mount the same `data/` and `storage/` volumes, and both use `restart: unless-stopped`. With the VPS running, your laptop can be off. The worker is the only process that should own scheduled publishing; do not scale it to more than one replica.
+
+GitHub Codespaces does **not** meet this bar: it stops when idle and is not an always-on server. Upload-Post also has its own `scheduled_date` API, but this build does not hand the schedule to Upload-Post yet — it sends the upload when the hub worker fires.
+
 ### VPS deployment (Docker + Caddy)
 
 The repo now includes `Dockerfile`, `docker-compose.yml` and `Caddyfile`.
@@ -97,7 +110,8 @@ The repo now includes `Dockerfile`, `docker-compose.yml` and `Caddyfile`.
 git clone <your-repo> /opt/my-social-hub
 cd /opt/my-social-hub
 cp .env.example .env.local
-# edit .env.local: APP_URL, DOMAIN, APP_ENCRYPTION_KEY, keys, R2 values
+# edit .env.local: APP_URL, DOMAIN, APP_ENCRYPTION_KEY, GEMINI_API_KEY,
+# UPLOADPOST_API_KEY/PLAN, R2 values, DISABLE_DEMO_LOGIN
 nano .env.local
 
 docker compose up -d --build
@@ -107,6 +121,35 @@ docker compose logs -f app
 Point your domain's A record at the VPS. Caddy obtains the TLS certificate automatically once `DOMAIN` is set.
 
 The `worker` service runs `npm run worker` with the same `data/` and `storage/` volumes. Do not scale it to multiple replicas — scheduled publishing must have one owner.
+
+### Before you expose it to anyone
+
+The seeded demo workspace has known passwords. Do this before pointing a public domain at the app:
+
+```bash
+# change the demo owner and manager passwords
+docker compose exec app npm run passwd -- owner@studio.local 'replace-with-a-long-password'
+docker compose exec app npm run passwd -- tunde@studio.local 'replace-with-a-long-password'
+
+# then hide the demo button and reject the demo action
+# .env.local
+DISABLE_DEMO_LOGIN=true
+
+docker compose up -d
+```
+
+- Set a strong `APP_ENCRYPTION_KEY` before connecting real OAuth accounts.
+- Keep `.env.local` out of git; it contains the Gemini key, Upload-Post key, platform secrets and the encryption key.
+- Put the app behind the included Caddy HTTPS config. Do not expose port 3000 directly.
+- If you invite a team, remember this is a **single shared workspace**: every user sees every brand. Do not invite an unrelated operator.
+- The app is not multi-tenant. For another operator, deploy a separate instance with their own `.env.local` and Upload-Post account.
+- Add nightly backups of `data/` and `storage/`; test a restore.
+
+### Sharing the running app
+
+- **Team:** Settings → Team → invite by email; one shared database/provider key.
+- **Client review:** use the tokenised approval link for a single post; no login.
+- **Another operator:** clone and deploy their own copy, with their own keys. Do not give them admin access to your instance.
 
 Backups:
 

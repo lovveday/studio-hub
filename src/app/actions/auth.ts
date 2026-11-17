@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { get } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
-import { createSession, destroySession } from "@/lib/auth";
+import { demoLoginEnabled, createSession, destroySession } from "@/lib/auth";
 import type { User } from "@/lib/types";
 
 export async function loginAction(formData: FormData) {
@@ -21,6 +21,7 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function demoLoginAction() {
+  if (!demoLoginEnabled()) redirect("/login?error=Demo login is disabled on this deployment.");
   const user = get<User>("SELECT * FROM users WHERE email = ?", ["owner@studio.local"]);
   if (!user) redirect("/login?error=Demo account is missing.");
   await createSession(user.id);

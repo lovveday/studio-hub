@@ -7,6 +7,10 @@ import type { User } from "./types";
 export const SESSION_COOKIE = "smh_session";
 const SESSION_DAYS = 30;
 
+export function demoLoginEnabled(): boolean {
+  return process.env.DISABLE_DEMO_LOGIN !== "true";
+}
+
 export async function createSession(userId: string) {
   const token = randomToken(32);
   const now = new Date();

@@ -1,8 +1,10 @@
 # Studio Hub
 
+**Built by Osekhuemen Peter-imoisili · 2026.**
+
 A local-first social media command center for a small agency team managing several client brands. It covers the loop the plan called for: **capture knowledge → plan → create → approve → schedule → assist publishing → engage → report** — with a Knowledge Inbox that turns notes, files, links and WhatsApp voice notes into versioned brand facts.
 
-> Publishing is **assisted by default**. Real OAuth connections and a mock publisher are built; real Meta/YouTube/LinkedIn/X/TikTok adapters are the next slice. AI uses Gemini when a key is present, otherwise clearly labelled demo templates.
+> Publishing is **automatic when Upload-Post is configured**, and **assisted by default** otherwise. Real OAuth connections and a mock publisher are also built. AI uses Gemini when a key is present, otherwise clearly labelled demo templates.
 
 ## Run it
 
@@ -14,12 +16,14 @@ npm run dev
 
 Do **not** pipe `next dev` output into a file inside this folder. Next watches the project and will reload in a loop when that log file changes. Use the terminal, or write logs to `$env:TEMP`.
 
-Deployment/callback guidance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Deployment/callback guidance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). For an always-on deployment, use Docker Compose (app + worker + Caddy) on a VPS or Oracle Always Free ARM — **not** Vercel or Codespaces. Scheduled posts publish only while the worker is running.
 
 Demo accounts (seeded):
 
 - `owner@studio.local` / `password123`
 - `tunde@studio.local` / `password123`
+
+Before exposing the app publicly, change these passwords with `npm run passwd -- <email> <password>` and set `DISABLE_DEMO_LOGIN=true`.
 
 The database is SQLite at `data/app.db` and is created automatically on first request. Reset it by deleting `data/` (it will re-seed).
 
@@ -116,6 +120,20 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 
 ### Voice notes — format note
 WhatsApp voice notes are Opus audio in an OGG container (`.opus` / `.ogg`), typically mono around 16 kHz. Forwards can arrive as `.m4a`, `.mp3`, `.amr` or `.wav`; all are accepted. The browser recorder produces `audio/webm`. Audio is kept in `storage/uploads/` and the UI states the 7-day retention rule.
+
+## Sharing this build
+
+This is a **single-workspace** app, not a multi-tenant SaaS. Pick the sharing model that matches the trust level:
+
+| Sharing model | What it gives | What to watch |
+|---|---|---|
+| **Trusted team on your deployment** | Settings → Team → invite a user. Everyone shares the same brands, database and provider key. | Every invited user can see every brand and post. One Upload-Post account/quota is shared. Not isolation. |
+| **Client review** | A tokenised approval link (`/approvals/[token]`) with no login. They can approve or request changes. | Read-only and scoped to one post. No provider key needed. |
+| **Another operator** | They clone this repo, deploy their own instance, add their own `.env.local` and their own Upload-Post key/profiles. | This is the clean path. Each instance has its own DB, media, users, quotas and audit log. |
+
+Do **not** hand the admin URL to an unrelated person: they would share your database. There is also no per-user provider credential model yet; the `UPLOADPOST_API_KEY` is deployment-wide. If you want to host this for multiple agencies, that needs a tenancy slice (per-user workspaces, per-tenant provider keys, isolation tests) before opening it up.
+
+There is no `LICENSE` file in this repository yet. Add one before redistributing the source; the deployment itself does not require it.
 
 ## Tech
 
