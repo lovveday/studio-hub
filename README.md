@@ -44,6 +44,7 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 
 ### Knowledge Inbox (the important correction)
 - Add a text note, upload a file (PDF, DOCX, MD, TXT, HTML, CSV, image, audio), fetch a URL, or record a voice note in the browser.
+- **Google NotebookLM:** there is no direct connector. Export/download the sources and add them here; see [docs/NOTEBOOKLM-IMPORT.md](docs/NOTEBOOKLM-IMPORT.md). A shared notebook URL will not be readable by the link fetcher.
 - WhatsApp voice notes: accepts `.opus`, `.ogg`, `.oga`, `.m4a`, `.mp3`, `.wav`, `.aac`, `.amr`, `.webm`. Audio is saved, sent to Gemini for transcription when a key exists, and a transcript can be edited manually if not.
 - Every source goes through `needs_review → approved / rejected`. Approving a source creates **pending** fact candidates.
 - Facts are versioned. Approving a fact that conflicts with an existing approved fact supersedes the old one (`valid_to`, `supersedes_id`) and keeps history.
@@ -188,6 +189,6 @@ Copy `.env.example` to `.env.local`. Never commit `.env.local` or paste real key
 - No email/push delivery yet; reminders are in-app notifications from the worker.
 - Browser dictation depends on the Web Speech API (best in Chrome/Edge); the server-side whisper pipeline and voice commands are the next voice slice.
 - No embeddings/pgvector yet: retrieval is keyword overlap over approved sources. This is deliberate for the SQLite slice; the interface is ready for a vector store.
-- The NotebookLM export is optional and not present in the repo. Upload it into the Knowledge Inbox when convenient.
+- NotebookLM has no direct connector here. Export/download the sources and add them to Knowledge; a shared notebook URL will not be parsed. See [docs/NOTEBOOKLM-IMPORT.md](docs/NOTEBOOKLM-IMPORT.md).
 
 Platform setup: [docs/API-KEYS.md](docs/API-KEYS.md). Free alternatives: [docs/FREE-ALTERNATIVES.md](docs/FREE-ALTERNATIVES.md). Next-build queue: [docs/NEXT-BUILD.md](docs/NEXT-BUILD.md).
