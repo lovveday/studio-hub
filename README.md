@@ -73,6 +73,14 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 - Dictation button on the brief: browser speech recognition appends to the textarea (Chrome/Edge), with a voice-note fallback in Knowledge.
 - Text generation falls back to DeepSeek (OpenAI-compatible) when a Gemini key is absent; transcription and image reading still need Gemini.
 
+### Stories
+- `/stories` is a Story Planner for Instagram and TikTok: 9:16 creative, scheduled time, and one of six stickers — poll, question, quiz, countdown, event or link.
+- The worker moves a plan to **Ready to post** at the due time and sends an in-app notification with the exact sticker script.
+- At the due time you download the creative, open the platform, add the sticker natively, publish, and mark it posted. The posted record is kept.
+- **Why assisted:** Instagram’s Content Publishing API supports Story media but **not interactive stickers**; TikTok’s Content Posting API has no Story endpoint. The app does not pretend to inject stickers through an API.
+- Story plans never consume Upload-Post uploads and never write a fake “published” result.
+- Full platform limits and test steps: [docs/STORIES.md](docs/STORIES.md).
+
 ### Virality Lab
 - `/virality` is a teardown library; `/virality/new` takes a clip, a public link or a transcript; `/virality/[id]` is the full read and adaptation brief.
 - **Inputs:** upload an MP4/MOV/WebM up to 100 MB (the browser captures up to 8 frames before upload), paste a TikTok/Instagram/YouTube/Facebook/LinkedIn/X link plus its transcript, or paste a script. Links are read for public metadata only — the lab never downloads third-party video.
@@ -171,6 +179,7 @@ Copy `.env.example` to `.env.local`. Never commit `.env.local` or paste real key
 ## Known limits / next slice
 
 - **Automatic publishing** is available through the optional Upload-Post adapter: one API key, no app reviews, 10 free uploads/month, 2 profiles, no TikTok on Free. After the limit, every target falls back to assisted mode. Direct Meta/YouTube/LinkedIn/X/TikTok adapters remain optional; without Upload-Post they produce assisted attempts.
+- **Stories are assisted by platform rule**, not by choice: Instagram Story media can be published by API but interactive stickers cannot; TikTok has no Story publishing API. The Story Planner schedules the creative + sticker script and reminds you to post natively. See [docs/STORIES.md](docs/STORIES.md).
 - Meta rejects a localhost callback. Use a tunnel (ngrok/cloudflared) or deploy first; the Settings page shows the exact callback base it will send.
 - Auto-like/auto-reply is modelled in the UI and data model but not executed against platforms. Instagram and LinkedIn support comment likes; YouTube does not expose a comment-like API; TikTok is partner-gated and its audit may reject an internal agency tool.
 - Binary doc parsing (PDF/DOCX/HTML) works server-side; image OCR needs a Gemini key. Scanned PDFs without a text layer need OCR later.

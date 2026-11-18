@@ -381,6 +381,24 @@ function migrate(db: SqliteDb) {
       PRIMARY KEY(provider, period)
     );
 
+    CREATE TABLE IF NOT EXISTS story_plans (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL DEFAULT 'instagram',
+      title TEXT NOT NULL,
+      caption TEXT NOT NULL DEFAULT '',
+      scheduled_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
+      sticker_json TEXT NOT NULL DEFAULT '[]',
+      notes TEXT NOT NULL DEFAULT '',
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      posted_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_story_plans_brand ON story_plans(brand_id, scheduled_at);
     CREATE INDEX IF NOT EXISTS idx_posts_brand_date ON posts(brand_id, scheduled_at);
     CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
     CREATE INDEX IF NOT EXISTS idx_knowledge_brand ON knowledge_items(brand_id, created_at);

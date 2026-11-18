@@ -256,3 +256,37 @@ export type ProviderUsage = {
   exhausted: number;
   updated_at: string;
 };
+
+export type StoryPlatform = "instagram" | "tiktok";
+
+export type StoryStatus = "draft" | "scheduled" | "ready" | "posted";
+
+export type StorySticker =
+  | { type: "poll"; question: string; options: string[] }
+  | { type: "question"; prompt: string }
+  | { type: "quiz"; question: string; options: string[]; answer: string }
+  | { type: "countdown"; title: string; endsAt: string }
+  | { type: "event"; title: string; startsAt: string; location: string }
+  | { type: "link"; url: string; label: string };
+
+export type StoryPlan = {
+  id: string;
+  brand_id: string;
+  platform: StoryPlatform;
+  title: string;
+  caption: string;
+  scheduled_at: string;
+  status: StoryStatus;
+  asset_id: string | null;
+  sticker_json: string;
+  notes: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  posted_at: string | null;
+};
+
+export type StoryPlanView = StoryPlan & {
+  asset: AssetRow | null;
+  stickers: StorySticker[];
+};

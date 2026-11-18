@@ -2,7 +2,14 @@ import "./load-env";
 import crypto from "node:crypto";
 import { all, get, run } from "../src/lib/db";
 import { publishPost } from "../src/lib/publishers";
-import type { Post } from "../src/lib/types";
+import {
+  dueStoryPlans,
+  markStoryReady,
+  parseStickers,
+  stickerSummary,
+  storyPlatformMeta,
+} from "../src/lib/stories";
+import type { Post, StoryPlatform } from "../src/lib/types";
 
 const TICK_MS = 60_000;
 
@@ -52,6 +59,7 @@ async function tick() {
   let dueCount = 0;
   let prepCount = 0;
   let overdueCount = 0;
+  let storyCount = 0;
 
   const due = all<Post>(
     `SELECT * FROM posts WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <= ?`,
@@ -84,6 +92,28 @@ async function tick() {
       `${post.title} · ${summary.published} published · ${summary.assisted} assisted · ${summary.failed} failed`
     );
     dueCount += 1;
+  }
+
+  const stories = dueStoryPlans(now);
+  for (const plan of stories) {
+    markStoryReady(plan.id);
+    const platform = storyPlatformMeta(plan.platform as StoryPlatform);
+    const sticker = parseStickers(plan.sticker_json)[0];
+    for (const user of users) {
+      notify({
+        userId: user.id,
+        brandId: plan.brand_id,
+        type: "story",
+        title: `Story due: ${plan.title}`,
+        body: sticker
+          ? `Open ${platform.label}, post the creative, add the ${sticker.type} sticker (${stickerSummary(sticker)}), then mark it posted.`
+          : `Open ${platform.label}, post the creative as a plain story, then mark it posted.`,
+        link: `/stories/${plan.id}`,
+        dedupeKey: `story:${plan.id}:${user.id}`,
+      });
+    }
+    log("Story due", `${plan.title} · ${platform.label} · ${sticker ? sticker.type : "plain"}`);
+    storyCount += 1;
   }
 
   const prep = all<Post>(
@@ -132,7 +162,7 @@ async function tick() {
     notifications: Number(get<{ c: number }>("SELECT count(*) AS c FROM notifications")?.c ?? 0),
   };
   console.log(
-    `[worker ${new Date().toLocaleTimeString("en-GB")}] due=${dueCount} prep=${prepCount} overdue=${overdueCount} posts=${counts.posts} notifications=${counts.notifications}`
+    `[worker ${new Date().toLocaleTimeString("en-GB")}] due=${dueCount} stories=${storyCount} prep=${prepCount} overdue=${overdueCount} posts=${counts.posts} notifications=${counts.notifications}`
   );
 }
 

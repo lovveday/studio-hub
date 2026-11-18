@@ -78,6 +78,7 @@ docker compose exec app npm run passwd -- tunde@studio.local 'a-long-new-passwor
 - [ ] `docker compose ps` shows app, worker and caddy running/healthy.
 - [ ] Upload-Post Settings shows the key and profile; connect two brands.
 - [ ] Schedule a post 3 minutes ahead; the worker publishes it (or records a clear assisted reason).
+- [ ] Schedule a Story plan 2 minutes ahead; the worker marks it Ready and sends the sticker notification. Mark it posted.
 - [ ] Free limit: set `UPLOADPOST_PLAN=free`; one multi-platform post counts as one upload.
 - [ ] After 10 uploads, the next post is assisted with the reset date.
 - [ ] Create a report; open the PDF/PPTX.

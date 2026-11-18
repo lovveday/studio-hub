@@ -11,7 +11,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock3, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Camera, Clock3, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getActiveBrand } from "@/lib/brand-context";
 import {
@@ -20,6 +20,8 @@ import {
   listPostsBetween,
   type PostWithPlatforms,
 } from "@/lib/data";
+import { listStoryPlans, storyPlatformMeta } from "@/lib/stories";
+import type { StoryPlanView } from "@/lib/types";
 import { cn, formatDateTime } from "@/lib/utils";
 import { platformMeta } from "@/lib/platforms";
 import {
@@ -72,6 +74,12 @@ export default async function CalendarPage({
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
   const posts = listPostsBetween(brand.id, gridStart.toISOString(), gridEnd.toISOString());
+  const storyPlans = listStoryPlans(brand.id, 200).filter(
+    (plan) =>
+      plan.status !== "draft" &&
+      new Date(plan.scheduled_at) >= gridStart &&
+      new Date(plan.scheduled_at) <= gridEnd
+  );
   const allPosts = listPosts(brand.id, 200);
   const counts = getPostCounts(brand.id);
   const unscheduled = allPosts.filter((post) => !post.scheduled_at).slice(0, 4);
@@ -90,10 +98,18 @@ export default async function CalendarPage({
     byDay.set(key, list);
   }
 
+  const storiesByDay = new Map<string, StoryPlanView[]>();
+  for (const plan of storyPlans) {
+    const key = format(new Date(plan.scheduled_at), "yyyy-MM-dd");
+    const list = storiesByDay.get(key) ?? [];
+    list.push(plan);
+    storiesByDay.set(key, list);
+  }
+
   return (
     <div className="space-y-6 fade-up">
       <PageHeader
-        eyebrow={`${brand.name} · ${counts.scheduled} scheduled · ${counts.needsReview} in review`}
+        eyebrow={`${brand.name} · ${counts.scheduled} scheduled · ${storyPlans.length} stories · ${counts.needsReview} in review`}
         title="The calendar"
         description="Plan the month, see what needs preparing, and catch anything that is about to slip."
         actions={
@@ -152,6 +168,11 @@ export default async function CalendarPage({
             {days.map((day) => {
               const key = format(day, "yyyy-MM-dd");
               const dayPosts = byDay.get(key) ?? [];
+              const dayStories = storiesByDay.get(key) ?? [];
+              const dayTotal = dayPosts.length + dayStories.length;
+              const shownPosts = dayPosts.slice(0, dayStories.length ? 2 : 3);
+              const shownStories = dayStories.slice(0, 2);
+              const shownTotal = shownPosts.length + shownStories.length;
               const inMonth = isSameMonth(day, month);
               return (
                 <div
@@ -171,14 +192,14 @@ export default async function CalendarPage({
                     >
                       {format(day, "d")}
                     </span>
-                    {dayPosts.length > 0 ? (
+                    {dayTotal > 0 ? (
                       <span className="text-[8px] font-bold uppercase tracking-[0.08em] text-muted/60">
-                        {dayPosts.length}
+                        {dayTotal}
                       </span>
                     ) : null}
                   </div>
                   <div className="space-y-1">
-                    {dayPosts.slice(0, 3).map((post) => {
+                    {shownPosts.map((post) => {
                       const platforms = (post.platforms ?? "").split(",").filter(Boolean);
                       return (
                         <Link
@@ -205,8 +226,29 @@ export default async function CalendarPage({
                         </Link>
                       );
                     })}
-                    {dayPosts.length > 3 ? (
-                      <p className="px-1 text-[8px] font-semibold text-muted">+{dayPosts.length - 3} more</p>
+                    {shownStories.map((plan) => {
+                      const platform = storyPlatformMeta(plan.platform);
+                      return (
+                        <Link
+                          key={plan.id}
+                          href={`/stories/${plan.id}`}
+                          className="block rounded-md border border-coral/25 bg-coral/[0.06] px-1.5 py-1 text-[9px] font-semibold leading-tight text-coral transition-opacity hover:opacity-80"
+                        >
+                          <span className="flex items-center gap-1">
+                            <Camera className="h-2.5 w-2.5" />
+                            {platform.label} story
+                            <span className="ml-auto font-normal opacity-80">
+                              {format(new Date(plan.scheduled_at), "HH:mm")}
+                            </span>
+                          </span>
+                          <span className="mt-0.5 line-clamp-1 text-ink/70">{plan.title}</span>
+                        </Link>
+                      );
+                    })}
+                    {dayTotal > shownTotal ? (
+                      <p className="px-1 text-[8px] font-semibold text-muted">
+                        +{dayTotal - shownTotal} more
+                      </p>
                     ) : null}
                   </div>
                 </div>

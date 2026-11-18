@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  Camera,
   FileBarChart,
   FlaskConical,
   LayoutDashboard,
@@ -19,6 +20,7 @@ const items = [
   { href: "/dashboard", label: "Command center", icon: LayoutDashboard },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/composer", label: "Composer", icon: PenLine },
+  { href: "/stories", label: "Stories", icon: Camera },
   { href: "/virality", label: "Virality Lab", icon: FlaskConical },
   { href: "/knowledge", label: "Knowledge", icon: Library },
   { href: "/inbox", label: "Inbox", icon: MessageCircle },
