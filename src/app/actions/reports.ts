@@ -14,8 +14,10 @@ export async function generateReportAction(formData: FormData) {
   const user = await requireUser();
   const brand = await getActiveBrand();
   const days = Number(formData.get("days") ?? 7) === 30 ? 30 : 7;
+  let reportId = "";
   try {
     const report = await generateReport(brand.id, days);
+    reportId = report.id;
     logActivity({
       brandId: brand.id,
       userId: user.id,
@@ -24,12 +26,12 @@ export async function generateReportAction(formData: FormData) {
       entityId: report.id,
       detail: `${brand.name} · ${days} days`,
     });
-    revalidatePath("/reports");
-    revalidatePath("/dashboard");
-    redirect(`/reports?generated=${report.id}`);
   } catch (error) {
     redirect(`/reports?error=${encodeURIComponent((error as Error).message)}`);
   }
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect(`/reports?generated=${reportId}`);
 }
 
 export async function deleteReportAction(formData: FormData) {
