@@ -16,7 +16,7 @@ npm run dev
 
 Do **not** pipe `next dev` output into a file inside this folder. Next watches the project and will reload in a loop when that log file changes. Use the terminal, or write logs to `$env:TEMP`.
 
-Deployment/callback guidance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Short operator checklist: [docs/DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md). Platform signup/handoff list: [docs/SIGNUP-CHECKLIST.md](docs/SIGNUP-CHECKLIST.md). For an always-on deployment, use Docker Compose (app + worker + Caddy) on a VPS or Oracle Always Free ARM — **not** Vercel or Codespaces. Scheduled posts publish only while the worker is running.
+Deployment/callback guidance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Short operator checklist: [docs/DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md). Platform signup/handoff list: [docs/SIGNUP-CHECKLIST.md](docs/SIGNUP-CHECKLIST.md). Temporary laptop-as-server runbook: [docs/LAPTOP-SERVER.md](docs/LAPTOP-SERVER.md). For an always-on deployment, use Docker Compose (app + worker + Caddy) on a VPS or Oracle Always Free ARM — **not** Vercel or Codespaces. Scheduled posts publish only while the worker is running.
 
 Demo accounts (seeded):
 
