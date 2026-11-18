@@ -97,6 +97,14 @@ docker compose exec app npm run passwd -- tunde@studio.local 'a-long-new-passwor
 | Gemini | depends on your key; free tier/paid usage |
 | Backups | free if self-hosted; off-site storage may cost |
 
+### Zero-cash path
+
+Oracle Always Free ARM + DuckDNS + Upload-Post Free + Gemini free tier + local storage + local backups = **$0/month**, with these trade-offs: Oracle capacity/verification, free-plan upload limits, no TikTok, and more manual maintenance.
+
+### Maintenance time
+
+Plan for 1–3 hours/month: OS/Docker updates, `git pull` + rebuild, backups and a quarterly restore test, disk/log checks, key rotation, and monitoring Upload-Post/platform API changes. The app does not auto-update itself.
+
 ## 8. Operational gotchas
 
 - Scheduled posts are **late** if the worker/server is down; they are not lost, but they are not queued for the exact original time.

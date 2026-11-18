@@ -1,5 +1,18 @@
 # Deployment & callback URLs
 
+## Production architecture
+
+There is **one full-stack Next.js application**, not a separate frontend and backend:
+
+- **Caddy** terminates HTTPS and reverse-proxies to the app.
+- **`app`** runs Next.js 16: React server components and the browser UI, plus the backend Route Handlers and Server Actions that write to SQLite and call the providers.
+- **`worker`** runs `scripts/worker.ts` on the same image and volumes; it owns scheduled publishing and story reminders.
+- **SQLite** lives at `data/app.db`; media lives under `storage/`. Both are bind-mounted from the VPS.
+- **Optional R2** stores large assets; the database, voice notes, reports and story creatives remain on the VPS.
+- **Cloudflare** in front is optional for DNS/proxy/WAF; Caddy already handles TLS.
+
+No Vercel, no separate API server, no Redis/Postgres for this slice.
+
 ## The bug you saw
 
 The settings page was not glitching on its own. The dev server was started with its output piped into `dev.log` **inside the project folder**. Next.js watches the project, saw `dev.log` change on every request, recompiled, wrote another log line, and triggered another reload — an infinite "opening…" loop.
