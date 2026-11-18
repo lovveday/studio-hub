@@ -7,9 +7,12 @@ Use this before pointing a domain at the app. The long-form version is [DEPLOYME
 | Option | Cost | Suits this app? |
 |---|---|---|
 | Oracle Cloud Always Free ARM (4 OCPU / 24 GB) | $0 | Yes, if capacity and card verification are available. Best zero-cash option. |
-| Hetzner CX22 / Contabo VPS | ~$4–8/month | Yes. Most predictable. 2 vCPU / 4 GB is comfortable. |
+| **Hetzner Cloud CX23** (2 vCPU / 4 GB / 40 GB) | ~$6.59/month with IPv4 | **Yes — choose this.** Ubuntu 24.04, public IPv4, SSH key. |
+| Hetzner CPX11 (2 vCPU / 2 GB) | ~$5–6/month | Possible with swap, but Next builds are tight. CX23 is safer. |
+| Hetzner Storage Share / Storage Box | $4–5/month | **No.** These are file/backup storage, not servers; no SSH/Docker. |
+| Contabo VPS | ~$4–8/month | Yes, if it is KVM with root SSH and Ubuntu. |
 | GitHub Codespaces | free core-hours | **No.** Stops when idle; not an always-on publisher. |
-| Vercel / Render free | $0 | **No.** Ephemeral disk and no long-running worker. |
+| Vercel / Render free / Netlify | $0 | **No.** Ephemeral/serverless storage and no long-running worker; SQLite and local media will not survive. |
 | Your laptop + tunnel | $0 | Fine for a preview; laptop must stay on. |
 
 The worker is the scheduler. If it is not running, scheduled posts do not publish.
