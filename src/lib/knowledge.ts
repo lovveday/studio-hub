@@ -384,6 +384,55 @@ export function rejectKnowledgeItem(id: string, userId: string, reason = "") {
   });
 }
 
+export function deleteKnowledgeItem(id: string, brandId: string): boolean {
+  const item = get<KnowledgeItem>("SELECT * FROM knowledge_items WHERE id = ? AND brand_id = ?", [
+    id,
+    brandId,
+  ]);
+  if (!item) return false;
+  if (item.status !== "rejected") {
+    throw new Error("Only rejected knowledge can be deleted.");
+  }
+
+  run("DELETE FROM brand_facts WHERE source_item_id = ? AND status IN ('pending','rejected')", [id]);
+  run("UPDATE brand_facts SET source_item_id = NULL WHERE source_item_id = ?", [id]);
+  run("DELETE FROM knowledge_items WHERE id = ?", [id]);
+
+  if (item.file_path) {
+    const root = path.join(process.cwd(), "storage");
+    const full = path.resolve(process.cwd(), item.file_path);
+    if (full.startsWith(root + path.sep)) {
+      try {
+        if (fs.existsSync(full)) fs.unlinkSync(full);
+      } catch {
+        // The database row is gone; file cleanup is best effort.
+      }
+    }
+  }
+  return true;
+}
+
+export function deleteRejectedKnowledge(brandId: string, userId: string): number {
+  const items = all<KnowledgeItem>(
+    "SELECT * FROM knowledge_items WHERE brand_id = ? AND status = 'rejected'",
+    [brandId]
+  );
+  let deleted = 0;
+  for (const item of items) {
+    if (deleteKnowledgeItem(item.id, brandId)) deleted += 1;
+  }
+  if (deleted > 0) {
+    logActivity({
+      brandId,
+      userId,
+      action: "Cleared rejected knowledge",
+      entity: "knowledge",
+      detail: `${deleted} rejected source${deleted === 1 ? "" : "s"} deleted`,
+    });
+  }
+  return deleted;
+}
+
 export function approveFact(id: string, userId: string) {
   const fact = get<BrandFact>("SELECT * FROM brand_facts WHERE id = ?", [id]);
   if (!fact) throw new Error("Fact not found.");

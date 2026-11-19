@@ -9,6 +9,7 @@ import {
   Mic,
   Sparkles,
   StickyNote,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
   addNoteAction,
   addUrlAction,
   approveFactAction,
+  clearRejectedKnowledgeAction,
   rejectFactAction,
   uploadKnowledgeAction,
 } from "@/app/actions/knowledge";
@@ -58,6 +60,8 @@ export default async function KnowledgePage({
     factStatus?: string;
     approved?: string;
     replaced?: string;
+    deleted?: string;
+    cleared?: string;
   }>;
 }) {
   await requireUser();
@@ -74,6 +78,7 @@ export default async function KnowledgePage({
         : facts.filter((fact) => fact.status === "pending");
   const pendingCount = facts.filter((fact) => fact.status === "pending").length;
   const approvedCount = facts.filter((fact) => fact.status === "approved" && !fact.valid_to).length;
+  const rejectedCount = items.filter((item) => item.status === "rejected").length;
 
   return (
     <div className="space-y-6 fade-up">
@@ -98,13 +103,37 @@ export default async function KnowledgePage({
       {params.replaced ? (
         <Notice tone="success">The new fact replaced the old one. The previous value is kept in history.</Notice>
       ) : null}
+      {params.deleted ? <Notice tone="success">Rejected source deleted.</Notice> : null}
+      {params.cleared ? (
+        <Notice tone="success">
+          {params.cleared === "0"
+            ? "There were no rejected sources to delete."
+            : `Deleted ${params.cleared} rejected source${params.cleared === "1" ? "" : "s"} and their files.`}
+        </Notice>
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[1.35fr_0.95fr]">
         <Card>
           <CardHeader
             title="Sources"
             description="Everything the writer can cite, newest first."
-            action={<Badge tone="neutral">{items.length} items</Badge>}
+            action={
+              <div className="flex items-center gap-2">
+                <Badge tone="neutral">{items.length} items</Badge>
+                {rejectedCount > 0 ? (
+                  <form action={clearRejectedKnowledgeAction}>
+                    <button
+                      type="submit"
+                      className="inline-flex h-7 items-center gap-1 rounded-lg border border-line bg-white px-2 text-[9px] font-bold text-muted hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                      title="Permanently delete all rejected sources and their files"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Clear rejected ({rejectedCount})
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            }
           />
           <div className="divide-y divide-line/70">
             {items.length === 0 ? (

@@ -45,7 +45,9 @@ The worker checks every 60 seconds. It moves due scheduled posts to **Ready to p
 ### Knowledge Inbox (the important correction)
 - Add a text note, upload a file (PDF, DOCX, MD, TXT, HTML, CSV, image, audio), fetch a URL, or record a voice note in the browser.
 - **Google NotebookLM:** there is no direct connector. Export/download the sources and add them here; see [docs/NOTEBOOKLM-IMPORT.md](docs/NOTEBOOKLM-IMPORT.md). A shared notebook URL will not be readable by the link fetcher.
-- WhatsApp voice notes: accepts `.opus`, `.ogg`, `.oga`, `.m4a`, `.mp3`, `.wav`, `.aac`, `.amr`, `.webm`. Audio is saved, sent to Gemini for transcription when a key exists, and a transcript can be edited manually if not.
+- WhatsApp voice notes: accepts `.opus`, `.ogg`, `.oga`, `.m4a`, `.mp3`, `.wav`, `.aac`, `.amr`, `.webm`. Deepgram is used when `DEEPGRAM_API_KEY` is present, with Gemini as the transcription fallback. A transcript can be edited manually if both are unavailable.
+- Dictation uses browser speech recognition when available and falls back to recording the mic and transcribing on the server (Deepgram/Gemini) if the browser speech service fails.
+- Rejected sources can be deleted individually or all at once with **Clear rejected**; the action removes the stored file as well.
 - Every source goes through `needs_review → approved / rejected`. Approving a source creates **pending** fact candidates.
 - Facts are versioned. Approving a fact that conflicts with an existing approved fact supersedes the old one (`valid_to`, `supersedes_id`) and keeps history.
 - The composer and writer only use approved, current facts.

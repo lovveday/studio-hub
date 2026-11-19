@@ -17,6 +17,7 @@ import { formatDate, relativeTime, safeJson, truncate } from "@/lib/utils";
 import type { FactCandidate } from "@/lib/types";
 import {
   approveKnowledgeAction,
+  deleteKnowledgeAction,
   rejectKnowledgeAction,
   reExtractKnowledgeAction,
   updateTranscriptAction,
@@ -86,7 +87,18 @@ export default async function KnowledgeDetailPage({
               </form>
             </>
           ) : (
-            <StatusBadge status={item.status} />
+            <>
+              <StatusBadge status={item.status} />
+              {item.status === "rejected" ? (
+                <form action={deleteKnowledgeAction}>
+                  <input type="hidden" name="id" value={item.id} />
+                  <Button type="submit" variant="outline" size="sm" className="text-red-600 hover:bg-red-50">
+                    <X className="h-3.5 w-3.5" />
+                    Delete permanently
+                  </Button>
+                </form>
+              ) : null}
+            </>
           )
         }
       />

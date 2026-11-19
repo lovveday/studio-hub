@@ -9,6 +9,8 @@ import { uuid } from "@/lib/password";
 import {
   approveFact,
   approveKnowledgeItem,
+  deleteKnowledgeItem,
+  deleteRejectedKnowledge,
   ingestFile,
   ingestText,
   ingestUrl,
@@ -47,13 +49,15 @@ export async function addUrlAction(formData: FormData) {
   const brand = await getActiveBrand();
   const url = String(formData.get("url") ?? "").trim();
   if (!url) fail("Paste a URL first.");
+  let resultId = "";
   try {
     const result = await ingestUrl({ brandId: brand.id, url, userId: user.id });
-    revalidatePath("/knowledge");
-    redirect(`/knowledge/${result.id}`);
+    resultId = result.id;
   } catch (error) {
     fail((error as Error).message);
   }
+  revalidatePath("/knowledge");
+  redirect(`/knowledge/${resultId}`);
 }
 
 export async function uploadKnowledgeAction(formData: FormData) {
@@ -63,6 +67,7 @@ export async function uploadKnowledgeAction(formData: FormData) {
   if (!(file instanceof File) || file.size === 0) fail("Choose a file first.");
   if (file.size > 30 * 1024 * 1024) fail("Files must be under 30 MB.");
   const buffer = Buffer.from(await file.arrayBuffer());
+  let resultId = "";
   try {
     const result = await ingestFile({
       brandId: brand.id,
@@ -72,12 +77,13 @@ export async function uploadKnowledgeAction(formData: FormData) {
       mimeType: file.type,
       userId: user.id,
     });
-    revalidatePath("/knowledge");
-    revalidatePath("/dashboard");
-    redirect(`/knowledge/${result.id}`);
+    resultId = result.id;
   } catch (error) {
     fail((error as Error).message);
   }
+  revalidatePath("/knowledge");
+  revalidatePath("/dashboard");
+  redirect(`/knowledge/${resultId}`);
 }
 
 export async function approveKnowledgeAction(formData: FormData) {
@@ -96,6 +102,38 @@ export async function rejectKnowledgeAction(formData: FormData) {
   rejectKnowledgeItem(id, user.id, String(formData.get("reason") ?? ""));
   revalidatePath("/knowledge");
   redirect("/knowledge");
+}
+
+export async function deleteKnowledgeAction(formData: FormData) {
+  const user = await requireUser();
+  const brand = await getActiveBrand();
+  const id = String(formData.get("id") ?? "");
+  let deleted = false;
+  try {
+    deleted = deleteKnowledgeItem(id, brand.id);
+  } catch (error) {
+    fail((error as Error).message);
+  }
+  if (!deleted) fail("That source was not found.");
+  logActivity({
+    brandId: brand.id,
+    userId: user.id,
+    action: "Deleted rejected knowledge",
+    entity: "knowledge",
+    entityId: id,
+  });
+  revalidatePath("/knowledge");
+  revalidatePath("/dashboard");
+  redirect("/knowledge?deleted=1");
+}
+
+export async function clearRejectedKnowledgeAction() {
+  const user = await requireUser();
+  const brand = await getActiveBrand();
+  const deleted = deleteRejectedKnowledge(brand.id, user.id);
+  revalidatePath("/knowledge");
+  revalidatePath("/dashboard");
+  redirect(`/knowledge?cleared=${deleted}`);
 }
 
 export async function approveFactAction(formData: FormData) {
@@ -134,13 +172,15 @@ export async function updateTranscriptAction(formData: FormData) {
 export async function reExtractKnowledgeAction(formData: FormData) {
   const user = await requireUser();
   const id = String(formData.get("id") ?? "");
+  let count = 0;
   try {
     const result = await reExtractKnowledge(id, user.id);
-    revalidatePath(`/knowledge/${id}`);
-    redirect(`/knowledge/${id}?reextracted=${result.facts.length}`);
+    count = result.facts.length;
   } catch (error) {
     redirect(`/knowledge/${id}?error=${encodeURIComponent((error as Error).message)}`);
   }
+  revalidatePath(`/knowledge/${id}`);
+  redirect(`/knowledge/${id}?reextracted=${count}`);
 }
 
 export async function addManualFactAction(formData: FormData) {

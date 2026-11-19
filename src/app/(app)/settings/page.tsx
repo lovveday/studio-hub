@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
+  UserRound,
   Users,
   Wifi,
   WifiOff,
@@ -46,6 +47,7 @@ import {
 } from "@/app/actions/brand";
 import { disconnectChannelAction } from "@/app/actions/channels";
 import { runRetentionAction, saveRetentionAction } from "@/app/actions/settings";
+import { updateProfileAction } from "@/app/actions/profile";
 import { ProviderSettings } from "@/components/provider-settings";
 import {
   Avatar,
@@ -78,6 +80,7 @@ export default async function SettingsPage({
     accounts?: string;
     provider?: string;
     providerMessage?: string;
+    profile?: string;
   }>;
 }) {
   const user = await requireUser();
@@ -119,6 +122,7 @@ export default async function SettingsPage({
       />
 
       {params.saved ? <Notice tone="success">Settings saved.</Notice> : null}
+      {params.profile ? <Notice tone="success">Your display name was updated.</Notice> : null}
       {params.connected ? (
         <Notice tone="success">
           Connected {params.connected} account{params.connected === "1" ? "" : "s"}
@@ -452,6 +456,7 @@ export default async function SettingsPage({
                 <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted">.env.local</p>
                 <pre className="mt-2 overflow-x-auto text-[10px] leading-relaxed text-ink/70">{`GEMINI_API_KEY=...
 DEEPSEEK_API_KEY=...
+DEEPGRAM_API_KEY=...
 SEARCH_API_KEY=...
 META_APP_ID=...
 GOOGLE_CLIENT_ID=...
@@ -463,11 +468,37 @@ RESEND_API_KEY=...
 S3_ENDPOINT=...`}</pre>
               </div>
               <p className="text-[10px] leading-relaxed text-muted">
-                Gemini is used for writing, extraction and transcription. DeepSeek is wired as an
-                OpenAI-compatible fallback in the provider layer. No key means the hub still works, with
-                clearly labelled demo copy.
+                Gemini is used for writing and extraction. Deepgram is preferred for voice notes and
+                dictation, with Gemini as the transcription fallback. DeepSeek is an OpenAI-compatible
+                text fallback. No key means the hub still works, with clearly labelled demo copy.
               </p>
             </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Your profile"
+              description="The name and initials shown in the sidebar and greeting."
+              action={<UserRound className="h-4 w-4 text-muted" />}
+            />
+            <form action={updateProfileAction} className="space-y-3 p-5">
+              <div className="flex items-center gap-3">
+                <Avatar name={user.name} color={user.avatar_color} size="md" />
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-semibold text-ink">{user.name}</p>
+                  <p className="truncate text-[10px] text-muted">{user.email}</p>
+                </div>
+              </div>
+              <Field label="Display name" htmlFor="profile-name" hint="Use your own name, not the seeded demo name.">
+                <Input id="profile-name" name="name" defaultValue={user.name} required maxLength={80} />
+              </Field>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] text-muted">Email and role stay unchanged.</p>
+                <Button type="submit" variant="outline" size="sm">
+                  Save name
+                </Button>
+              </div>
+            </form>
           </Card>
 
           <Card>

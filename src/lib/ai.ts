@@ -18,6 +18,56 @@ export function deepseekKey(): string {
   return process.env.DEEPSEEK_API_KEY || "";
 }
 
+export function deepgramKey(): string {
+  return process.env.DEEPGRAM_API_KEY || process.env.deepgram_api_key || "";
+}
+
+function deepgramBase(): string {
+  return (
+    process.env.DEEPGRAM_BASE_URL ||
+    process.env.deepgram_base_url ||
+    "https://api.deepgram.com"
+  ).replace(/\/+$/, "");
+}
+
+function deepgramModel(): string {
+  return process.env.DEEPGRAM_MODEL || process.env.deepgram_model || "nova-3";
+}
+
+async function transcribeWithDeepgram(buffer: Buffer, mimeType: string): Promise<string> {
+  const key = deepgramKey();
+  if (!key) throw new Error("No Deepgram key configured.");
+  const params = new URLSearchParams({
+    model: deepgramModel(),
+    smart_format: "true",
+    punctuate: "true",
+    diarize: "false",
+  });
+  const response = await fetch(`${deepgramBase()}/v1/listen?${params.toString()}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${key}`,
+      "Content-Type": (mimeType || "audio/webm").split(";")[0],
+    },
+    body: new Uint8Array(buffer),
+    signal: AbortSignal.timeout(90_000),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Deepgram ${response.status}: ${body.slice(0, 300)}`);
+  }
+  const data = (await response.json()) as {
+    results?: {
+      channels?: Array<{
+        alternatives?: Array<{ transcript?: string }>;
+      }>;
+    };
+  };
+  const text = data.results?.channels?.[0]?.alternatives?.[0]?.transcript?.trim() ?? "";
+  if (!text) throw new Error("Deepgram returned an empty transcript.");
+  return text;
+}
+
 export function aiStatus() {
   const gemini = Boolean(aiKey());
   const deepseek = Boolean(deepseekKey());
@@ -198,7 +248,7 @@ export async function generateJson<T>(prompt: string, fallback: T): Promise<T> {
 
 export type TranscriptionResult = {
   text: string;
-  mode: "gemini" | "manual";
+  mode: "deepgram" | "gemini" | "manual";
   error?: string;
 };
 
@@ -207,14 +257,27 @@ export async function transcribeAudio(
   mimeType: string,
   context = ""
 ): Promise<TranscriptionResult> {
+  let deepgramError = "";
+
+  if (deepgramKey()) {
+    try {
+      const text = await transcribeWithDeepgram(buffer, mimeType);
+      return { text, mode: "deepgram" };
+    } catch (error) {
+      deepgramError = (error as Error).message;
+      console.warn("[ai] Deepgram transcription fallback:", deepgramError);
+    }
+  }
+
   if (!aiKey()) {
     return {
       text: "",
       mode: "manual",
-      error: "No Gemini key configured. Paste the transcript manually, or add GEMINI_API_KEY to .env.local.",
+      error: deepgramError
+        ? `Deepgram failed and no Gemini key is configured: ${deepgramError}`
+        : "No transcription key configured. Add DEEPGRAM_API_KEY or GEMINI_API_KEY, or paste the transcript manually.",
     };
   }
-  const base64 = buffer.toString("base64");
   if (buffer.byteLength > 18 * 1024 * 1024) {
     return {
       text: "",
@@ -222,11 +285,12 @@ export async function transcribeAudio(
       error: "This audio is over 18 MB. Split it or paste the transcript manually.",
     };
   }
+  const base64 = buffer.toString("base64");
   try {
     const text = await callGemini(
       [
         {
-          text: `Transcribe this audio accurately. It may be a WhatsApp voice note about a client brand. Preserve names, handles, prices and dates exactly. Return only the transcript, no commentary. Brand context: ${context}`,
+          text: `Transcribe this audio accurately. It may be a WhatsApp voice note or dictation about a client brand. Preserve names, handles, prices and dates exactly. Return only the transcript, no commentary. Brand context: ${context}`,
         },
         { inlineData: { mimeType: mimeType || "audio/ogg", data: base64 } },
       ],

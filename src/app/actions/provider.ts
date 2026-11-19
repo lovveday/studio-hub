@@ -91,6 +91,7 @@ export async function refreshProviderProfileAction() {
     settingsRedirect("Connect an Upload-Post profile first.", "error");
     throw new Error("No provider profile.");
   }
+  let message = "";
   try {
     const remote = await fetchRemoteProfile(profile.profile_username);
     saveProviderProfile({
@@ -100,17 +101,15 @@ export async function refreshProviderProfileAction() {
       connectedPlatforms: remote.connectedPlatforms,
       status: remote.needsReconnect ? "needs_reconnect" : "connected",
     });
-    revalidatePath("/settings");
-    revalidatePath("/dashboard");
-    settingsRedirect(
-      remote.connectedPlatforms.length
-        ? `Connected: ${remote.connectedPlatforms.join(", ")}.`
-        : "Profile found, but no social accounts are connected yet.",
-      "refreshed"
-    );
+    message = remote.connectedPlatforms.length
+      ? `Connected: ${remote.connectedPlatforms.join(", ")}.`
+      : "Profile found, but no social accounts are connected yet.";
   } catch (error) {
     settingsRedirect((error as Error).message, "error");
   }
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  settingsRedirect(message, "refreshed");
 }
 
 export async function removeProviderProfileAction() {
