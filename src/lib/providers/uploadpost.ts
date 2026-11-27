@@ -225,6 +225,26 @@ export function deleteProviderProfile(brandId: string): void {
   run("DELETE FROM provider_profiles WHERE brand_id = ? AND provider = ?", [brandId, PROVIDER]);
 }
 
+export function rememberUploadPostPlatforms(brandId: string, platforms: string[]): void {
+  if (!platforms.length) return;
+  const row = get<ProviderProfile>(
+    "SELECT * FROM provider_profiles WHERE brand_id = ? AND provider = ?",
+    [brandId, PROVIDER]
+  );
+  if (!row) return;
+  let connected: string[] = [];
+  try {
+    connected = JSON.parse(row.connected_platforms_json || "[]") as string[];
+  } catch {
+    connected = [];
+  }
+  const merged = [...new Set([...connected, ...platforms])];
+  run(
+    "UPDATE provider_profiles SET connected_platforms_json = ?, updated_at = ? WHERE id = ?",
+    [JSON.stringify(merged), new Date().toISOString(), row.id]
+  );
+}
+
 export type RemoteProfile = {
   username: string;
   displayName: string;

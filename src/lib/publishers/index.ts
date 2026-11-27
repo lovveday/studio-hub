@@ -15,6 +15,7 @@ import {
   providerProfileForBrand,
   providerUsage,
   publishViaUploadPost,
+  rememberUploadPostPlatforms,
   uploadPostConfigured,
 } from "../providers/uploadpost";
 import {
@@ -204,6 +205,12 @@ export async function publishPost(postId: string, userId: string | null): Promis
           assets,
           profile: provider,
         });
+        rememberUploadPostPlatforms(
+          post.brand_id,
+          [...outcome.results.entries()]
+            .filter(([, result]) => result.status === "published")
+            .map(([platform]) => platform)
+        );
         for (const variant of variants) {
           if (!pending.some((item) => item.id === variant.id)) {
             summary.published += 1;

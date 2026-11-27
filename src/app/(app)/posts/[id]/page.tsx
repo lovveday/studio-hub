@@ -101,6 +101,19 @@ export default async function PostDetailPage({
   const variants = getPostVariants(post.id);
   const media = listPostAssets(post.id);
   const publishAttempts = listPublishAttempts(post.id);
+  const latestAttempt = new Map<string, (typeof publishAttempts)[number]>();
+  for (const attempt of publishAttempts) {
+    if (!latestAttempt.has(attempt.platform)) latestAttempt.set(attempt.platform, attempt);
+  }
+  const publishedPlatforms = new Set(
+    publishAttempts.filter((attempt) => attempt.status === "published").map((attempt) => attempt.platform)
+  );
+  const pendingVariants = variants.filter((variant) => !publishedPlatforms.has(variant.platform));
+  const scheduledFuture = Boolean(
+    post.scheduled_at &&
+      new Date(post.scheduled_at).getTime() > Date.now() &&
+      post.status !== "published"
+  );
   const ai = aiStatus();
   const platforms = variants.map((variant) => variant.platform);
   const sharePath = post.share_token ? `/approvals/${post.share_token}` : "";
@@ -172,7 +185,7 @@ export default async function PostDetailPage({
                   <input type="hidden" name="postId" value={post.id} />
                   <Button type="submit" variant="outline" size="sm">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Run publisher
+                    Publish now
                   </Button>
                 </form>
                 <form action={markPublishedAction}>
@@ -223,6 +236,13 @@ export default async function PostDetailPage({
         </Notice>
       ) : null}
       {query.error ? <Notice tone="error">{query.error}</Notice> : null}
+      {scheduledFuture ? (
+        <Notice tone="info">
+          Scheduled for {formatDateTime(post.scheduled_at)}. The worker publishes automatically at
+          that time. <strong>Publish now</strong> attempts all targets immediately and bypasses the
+          schedule.
+        </Notice>
+      ) : null}
       {overdue ? (
         <Notice tone="warning">
           <span className="flex items-center gap-1.5">
@@ -386,13 +406,22 @@ export default async function PostDetailPage({
           <Card>
             <CardHeader
               title="Assisted post kit"
-              description="No API connection yet. Copy the copy, open the app, attach the creative, paste the first comment."
-              action={<Badge tone="coral">Assisted</Badge>}
+              description={
+                pendingVariants.length
+                  ? `${pendingVariants.length} target${pendingVariants.length === 1 ? "" : "s"} still need manual work. Already-published platforms are not repeated below.`
+                  : "Every target has a published attempt. No assisted work is left for this post."
+              }
+              action={
+                <Badge tone={pendingVariants.length ? "coral" : "teal"}>
+                  {pendingVariants.length ? `${pendingVariants.length} left` : "All done"}
+                </Badge>
+              }
             />
             <div className="divide-y divide-line/70">
-              {variants.map((variant) => {
+              {pendingVariants.map((variant) => {
                 const meta = platformMeta(variant.platform);
                 const text = [variant.caption, variant.hashtags].filter(Boolean).join("\n\n");
+                const last = latestAttempt.get(variant.platform);
                 return (
                   <div key={variant.id} className="px-5 py-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -406,6 +435,11 @@ export default async function PostDetailPage({
                     <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-muted">
                       {variant.caption}
                     </p>
+                    {last && last.status !== "published" ? (
+                      <p className="mt-2 rounded-lg bg-cream/60 px-2.5 py-2 text-[10px] leading-relaxed text-ink/70">
+                        {last.error || "This target still needs a manual post."}
+                      </p>
+                    ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <CopyButton text={text} label="Copy caption" />
                       <CopyButton text={variant.first_comment} label="Copy first comment" />
@@ -424,6 +458,11 @@ export default async function PostDetailPage({
               })}
               {variants.length === 0 ? (
                 <p className="px-5 py-6 text-xs text-muted">No variants yet. Generate them above.</p>
+              ) : null}
+              {variants.length > 0 && pendingVariants.length === 0 ? (
+                <p className="px-5 py-6 text-xs font-medium text-teal">
+                  Nothing to copy — every platform variant has already published.
+                </p>
               ) : null}
             </div>
           </Card>
