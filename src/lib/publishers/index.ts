@@ -190,6 +190,34 @@ export async function publishPost(postId: string, userId: string | null): Promis
     return summary;
   }
 
+  const hasRealPublishingProvider = uploadPostConfigured() || socialApiConfigured();
+  if (hasRealPublishingProvider && !primaryAvailable && !secondaryAvailable) {
+    const pending = variants.filter((variant) => !getPublishedAttempt(postId, variant.platform));
+    const reason = !provider && !secondaryProfile
+      ? "No publishing profile is connected. Use the assisted kit."
+      : "Both publishing providers are exhausted or unavailable. Use the assisted kit until the next reset.";
+    for (const variant of pending) {
+      const result: PublishResult = { status: "assisted_required", error: reason };
+      insertAttempt({
+        postId,
+        platform: variant.platform,
+        accountId: null,
+        result,
+        request: { provider: "assisted", reason },
+      });
+      summary.assisted += 1;
+      summary.results.push({ platform: variant.platform, status: result.status, error: reason });
+    }
+    for (const variant of variants) {
+      if (!pending.some((item) => item.id === variant.id)) {
+        summary.published += 1;
+        summary.results.push({ platform: variant.platform, status: "published" });
+      }
+    }
+    finishPost(postId, summary, post.brand_id, userId, " · assisted (no provider capacity)");
+    return summary;
+  }
+
   if (provider && uploadPostConfigured() && providerUsage().allowed) {
     const pending = variants.filter((variant) => !getPublishedAttempt(postId, variant.platform));
     if (pending.length === 0) {
