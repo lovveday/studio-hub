@@ -1,12 +1,10 @@
 import Link from "next/link";
 import {
-  Bot,
   Building2,
   CheckCircle2,
   Database,
   ExternalLink,
   HardDrive,
-  KeyRound,
   Palette,
   Plus,
   ShieldCheck,
@@ -92,7 +90,13 @@ export default async function SettingsPage({
   const profile = getBrandProfile(brand.id);
   const brands = listBrands();
   const users = listUsers();
-  const accounts = listSocialAccounts(brand.id);
+  const accounts = listSocialAccounts(brand.id).filter((account) => {
+    try {
+      return !(JSON.parse(account.metadata_json || "{}") as { mock?: boolean }).mock;
+    } catch {
+      return true;
+    }
+  });
   const retention = getRetentionStats();
   const hotDays = getSetting("retention.hot_days", "90");
   const voiceDays = getSetting("retention.voice_audio_days", "7");
@@ -264,10 +268,10 @@ export default async function SettingsPage({
           <Card>
             <CardHeader
               title="Channels"
-              description="Connect the real accounts when the developer apps are ready, or connect demo accounts to test publishing now."
+              description="Direct OAuth connections for analytics and comment automation. Upload-Post/SocialAPI publishing does not require these."
               action={
-                <Badge tone={accounts.length ? "teal" : "gold"}>
-                  {accounts.length ? `${accounts.length} connected` : "Assisted only"}
+                <Badge tone={accounts.length ? "teal" : "neutral"}>
+                  {accounts.length ? `${accounts.length} connected` : "Optional"}
                 </Badge>
               }
             />
@@ -292,22 +296,9 @@ export default async function SettingsPage({
               </p>
               {!encryptionReady ? (
                 <p className="text-[10px] font-semibold text-red-600">
-                  Set <code>APP_ENCRYPTION_KEY</code> before connecting a real account. Demo connections work
-                  without it.
+                  Set <code>APP_ENCRYPTION_KEY</code> before connecting a real account.
                 </p>
               ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  href="/api/oauth/mock/start"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 text-[10px] font-bold text-ink hover:bg-cream/60"
-                >
-                  <Wifi className="h-3 w-3" />
-                  Connect demo accounts
-                </Link>
-                <span className="text-[10px] text-muted">
-                  Demo accounts publish immediately and never touch a real platform.
-                </span>
-              </div>
             </div>
             <div className="divide-y divide-line/70">
               {PLATFORM_ORDER.map((platform) => {
@@ -451,48 +442,6 @@ export default async function SettingsPage({
         </div>
 
         <div className="space-y-5">
-          <Card>
-            <CardHeader
-              title="AI & keys"
-              description="The hub runs in demo mode until a key is present."
-              action={<KeyRound className="h-4 w-4 text-muted" />}
-            />
-            <div className="space-y-3 p-5">
-              <div className="flex items-center justify-between rounded-xl bg-cream/50 px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-4 w-4 text-ink/60" />
-                  <div>
-                    <p className="text-[11px] font-semibold text-ink">
-                      {ai.configured ? "Gemini" : "Demo templates"}
-                    </p>
-                    <p className="text-[9px] text-muted">{ai.model}</p>
-                  </div>
-                </div>
-                <Badge tone={ai.configured ? "teal" : "gold"}>{ai.configured ? "Live" : "Offline"}</Badge>
-              </div>
-              <div className="rounded-xl border border-line bg-white p-3">
-                <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted">.env.local</p>
-                <pre className="mt-2 overflow-x-auto text-[10px] leading-relaxed text-ink/70">{`GEMINI_API_KEY=...
-DEEPSEEK_API_KEY=...
-DEEPGRAM_API_KEY=...
-SEARCH_API_KEY=...
-META_APP_ID=...
-GOOGLE_CLIENT_ID=...
-LINKEDIN_CLIENT_ID=...
-X_CLIENT_ID=...
-TIKTOK_CLIENT_KEY=...
-WHATSAPP_ACCESS_TOKEN=...
-RESEND_API_KEY=...
-S3_ENDPOINT=...`}</pre>
-              </div>
-              <p className="text-[10px] leading-relaxed text-muted">
-                Gemini is used for writing and extraction. Deepgram is preferred for voice notes and
-                dictation, with Gemini as the transcription fallback. DeepSeek is an OpenAI-compatible
-                text fallback. No key means the hub still works, with clearly labelled demo copy.
-              </p>
-            </div>
-          </Card>
-
           <Card>
             <CardHeader
               title="Your profile"

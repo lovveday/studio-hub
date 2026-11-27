@@ -136,8 +136,8 @@ export default async function LoginPage({
           ) : null}
 
           <p className="mt-8 text-[10px] leading-relaxed text-muted/70">
-            Local-first demo. Publishing uses Upload-Post when configured, otherwise assisted mode.
-            AI falls back to demo templates until `GEMINI_API_KEY` is set.
+            Studio Hub. Publishing and AI keys are configured by the workspace owner in Settings →
+            API connections. Assisted mode remains available without provider credentials.
           </p>
           <div className="mt-4">
             <Signature />

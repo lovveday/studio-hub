@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut, Plus, Search } from "lucide-react";
+import { LogOut, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getActiveBrand } from "@/lib/brand-context";
 import {
@@ -106,13 +106,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <Link
-                href="/knowledge"
-                className="hidden h-9 w-[210px] items-center gap-2 rounded-xl border border-line bg-white px-3 text-[11px] text-muted shadow-sm transition-colors hover:bg-cream/50 sm:flex"
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search the brand brain…
-              </Link>
               <NotificationMenu notifications={notifications} unread={unread} />
               <Link href="/settings" className="rounded-full ring-2 ring-white">
                 <Avatar name={user.name} color={user.avatar_color} />

@@ -40,8 +40,8 @@ export function ProviderSettings({
   return (
     <Card>
       <CardHeader
-        title="Automatic publishing"
-        description="Upload-Post carries the platform approvals. Assisted mode is always the fallback."
+        title="Upload-Post profile & usage"
+        description="Manage the primary publishing profile and see its monthly upload allowance."
         action={
           <Badge tone={configured && profile ? "teal" : configured ? "gold" : "neutral"}>
             {!configured ? "No API key" : profile ? "Connected" : "Key only"}
