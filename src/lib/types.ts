@@ -243,6 +243,9 @@ export type ProviderProfile = {
   display_name: string;
   connected_platforms_json: string;
   status: "connected" | "needs_reconnect" | "disconnected";
+  remote_id: string | null;
+  metadata_json: string;
+  encrypted_profile_key: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -255,6 +258,31 @@ export type ProviderUsage = {
   last_reset: string | null;
   exhausted: number;
   updated_at: string;
+};
+
+export type IntegrationKind = "publishing" | "transcription" | "ai" | "storage" | "oauth";
+
+export type IntegrationAccount = {
+  id: string;
+  kind: IntegrationKind;
+  provider: string;
+  role: "primary" | "secondary" | "default";
+  label: string;
+  encrypted_secret: string;
+  config_json: string;
+  enabled: number;
+  priority: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type IntegrationAccountView = Omit<IntegrationAccount, "encrypted_secret"> & {
+  configured: boolean;
+  source: "vault" | "environment";
+  masked: string;
+  testStatus?: "untested" | "ok" | "error";
+  testMessage?: string;
 };
 
 export type StoryPlatform = "instagram" | "tiktok";

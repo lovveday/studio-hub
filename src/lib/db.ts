@@ -381,6 +381,24 @@ function migrate(db: SqliteDb) {
       PRIMARY KEY(provider, period)
     );
 
+    CREATE TABLE IF NOT EXISTS integration_accounts (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'default',
+      label TEXT NOT NULL,
+      encrypted_secret TEXT NOT NULL,
+      config_json TEXT NOT NULL DEFAULT '{}',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      priority INTEGER NOT NULL DEFAULT 100,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(kind, provider)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_integration_accounts_kind ON integration_accounts(kind, enabled);
+
     CREATE TABLE IF NOT EXISTS story_plans (
       id TEXT PRIMARY KEY,
       brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
@@ -427,6 +445,9 @@ function migrate(db: SqliteDb) {
   addColumnIfMissing(db, "virality_analyses", "test_notes", "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing(db, "virality_analyses", "test_started_at", "TEXT");
   addColumnIfMissing(db, "virality_analyses", "test_completed_at", "TEXT");
+  addColumnIfMissing(db, "provider_profiles", "remote_id", "TEXT");
+  addColumnIfMissing(db, "provider_profiles", "metadata_json", "TEXT NOT NULL DEFAULT '{}'");
+  addColumnIfMissing(db, "provider_profiles", "encrypted_profile_key", "TEXT");
 }
 
 function addColumnIfMissing(db: SqliteDb, table: string, column: string, definition: string) {

@@ -12,6 +12,8 @@ import type {
   ProviderUsage,
 } from "../types";
 import type { PublishResult } from "../publishers/types";
+import { integrationConfig, integrationSecret } from "./credentials";
+import { getAppUrl } from "../app-url";
 
 const API_BASE = (process.env.UPLOADPOST_API_BASE || "https://api.upload-post.com").replace(/\/$/, "");
 const PROVIDER = "uploadpost";
@@ -57,7 +59,7 @@ export class UploadPostError extends Error {
 }
 
 export function uploadPostApiKey(): string {
-  return process.env.UPLOADPOST_API_KEY || "";
+  return integrationSecret("uploadpost", "publishing") || process.env.UPLOADPOST_API_KEY || "";
 }
 
 export function uploadPostConfigured(): boolean {
@@ -65,16 +67,18 @@ export function uploadPostConfigured(): boolean {
 }
 
 export function uploadPostPlan(): UploadPostPlan {
-  return process.env.UPLOADPOST_PLAN === "paid" ? "paid" : "free";
+  const config = integrationConfig("uploadpost");
+  return String(config.plan ?? process.env.UPLOADPOST_PLAN) === "paid" ? "paid" : "free";
 }
 
 export function uploadPostLimit(): number {
-  const configured = Number(process.env.UPLOADPOST_FREE_LIMIT || "10");
+  const config = integrationConfig("uploadpost");
+  const configured = Number(config.freeLimit ?? process.env.UPLOADPOST_FREE_LIMIT ?? "10");
   return Number.isFinite(configured) && configured > 0 ? configured : 10;
 }
 
 export function uploadPostAppUrl(): string {
-  return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  return getAppUrl();
 }
 
 function currentPeriod(): string {

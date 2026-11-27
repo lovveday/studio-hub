@@ -13,9 +13,16 @@ import { MockAdapter } from "./mock";
 import type { PublishResult } from "./types";
 import {
   providerProfileForBrand,
+  providerUsage,
   publishViaUploadPost,
   uploadPostConfigured,
 } from "../providers/uploadpost";
+import {
+  publishViaSocialApi,
+  socialApiConfigured,
+  socialApiProfile,
+  socialApiUsage,
+} from "../providers/socialapi";
 
 type PublishSummary = {
   published: number;
@@ -106,7 +113,83 @@ export async function publishPost(postId: string, userId: string | null): Promis
   };
 
   const provider = providerProfileForBrand(post.brand_id);
-  if (provider && uploadPostConfigured()) {
+  const primaryAvailable = Boolean(
+    provider && uploadPostConfigured() && providerUsage().allowed
+  );
+  const secondaryProfile = socialApiProfile(post.brand_id);
+  const secondaryAvailable = Boolean(
+    secondaryProfile && socialApiConfigured() && socialApiUsage().allowed
+  );
+
+  if (!primaryAvailable && secondaryAvailable && secondaryProfile) {
+    const pending = variants.filter((variant) => !getPublishedAttempt(postId, variant.platform));
+    if (pending.length === 0) {
+      for (const variant of variants) {
+        summary.published += 1;
+        summary.results.push({ platform: variant.platform, status: "published" });
+      }
+    } else {
+      try {
+        const outcome = await publishViaSocialApi({
+          post,
+          variants: pending,
+          assets,
+          profile: secondaryProfile,
+        });
+        for (const variant of variants) {
+          if (!pending.some((item) => item.id === variant.id)) {
+            summary.published += 1;
+            summary.results.push({ platform: variant.platform, status: "published" });
+            continue;
+          }
+          const result = outcome.results.get(variant.platform) ?? {
+            status: "assisted_required" as const,
+            error: "SocialAPI did not return a result for this platform.",
+          };
+          insertAttempt({
+            postId,
+            platform: variant.platform,
+            accountId: null,
+            result,
+            request: {
+              provider: "socialapi",
+              profile: secondaryProfile.remote_id || secondaryProfile.profile_username,
+            },
+            response: {
+              status: result.status,
+              externalId: result.externalId ?? null,
+              usage: outcome.usage ?? null,
+              error: result.error ?? outcome.error ?? null,
+            },
+          });
+          if (result.status === "published") summary.published += 1;
+          else if (result.status === "failed") summary.failed += 1;
+          else summary.assisted += 1;
+          summary.results.push({ platform: variant.platform, status: result.status, error: result.error });
+        }
+      } catch (error) {
+        for (const variant of pending) {
+          const result: PublishResult = {
+            status: "assisted_required",
+            error: `SocialAPI failed: ${(error as Error).message}`,
+          };
+          insertAttempt({
+            postId,
+            platform: variant.platform,
+            accountId: null,
+            result,
+            request: { provider: "socialapi" },
+          });
+          summary.assisted += 1;
+          summary.results.push({ platform: variant.platform, status: result.status, error: result.error });
+        }
+      }
+    }
+    finishPost(postId, summary, post.brand_id, userId, " · socialapi");
+    return summary;
+  }
+
+  if (provider && uploadPostConfigured() && providerUsage().allowed) {
     const pending = variants.filter((variant) => !getPublishedAttempt(postId, variant.platform));
     if (pending.length === 0) {
       for (const variant of variants) {

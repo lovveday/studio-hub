@@ -11,6 +11,7 @@ import {
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { integrationConfig, integrationSecret } from "./providers/credentials";
 
 export const MAX_UPLOAD_BYTES = 300 * 1024 * 1024;
 export const R2_PART_SIZE = 16 * 1024 * 1024;
@@ -25,17 +26,24 @@ type R2Config = {
 };
 
 function r2Config(): R2Config | null {
-  const accountId = process.env.R2_ACCOUNT_ID || "";
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID || "";
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || "";
-  const bucket = process.env.R2_BUCKET || "";
+  const config = integrationConfig("r2");
+  let stored: { accessKeyId?: string; secretAccessKey?: string } = {};
+  try {
+    stored = JSON.parse(integrationSecret("r2", "storage") || "{}") as typeof stored;
+  } catch {
+    stored = {};
+  }
+  const accountId = String(config.accountId || process.env.R2_ACCOUNT_ID || "");
+  const accessKeyId = String(stored.accessKeyId || process.env.R2_ACCESS_KEY_ID || "");
+  const secretAccessKey = String(stored.secretAccessKey || process.env.R2_SECRET_ACCESS_KEY || "");
+  const bucket = String(config.bucket || process.env.R2_BUCKET || "");
   if (!accountId || !accessKeyId || !secretAccessKey || !bucket) return null;
   return {
     accountId,
     accessKeyId,
     secretAccessKey,
     bucket,
-    publicBaseUrl: (process.env.R2_PUBLIC_BASE_URL || "").replace(/\/$/, ""),
+    publicBaseUrl: String(config.publicBaseUrl || process.env.R2_PUBLIC_BASE_URL || "").replace(/\/$/, ""),
   };
 }
 

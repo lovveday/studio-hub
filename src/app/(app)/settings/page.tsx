@@ -48,6 +48,10 @@ import {
 import { disconnectChannelAction } from "@/app/actions/channels";
 import { runRetentionAction, saveRetentionAction } from "@/app/actions/settings";
 import { updateProfileAction } from "@/app/actions/profile";
+import { getAppUrl } from "@/lib/app-url";
+import { listIntegrationViews } from "@/lib/providers/credentials";
+import { socialApiProfile, socialApiUsage } from "@/lib/providers/socialapi";
+import { IntegrationSettings } from "@/components/integration-settings";
 import { ProviderSettings } from "@/components/provider-settings";
 import {
   Avatar,
@@ -96,7 +100,7 @@ export default async function SettingsPage({
   const params = await searchParams;
   const canManage = canManageBrand(user);
   const pillars = safeJson<string[]>(profile?.pillars, []).join("\n");
-  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = getAppUrl();
   const isLocalMeta = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
   const encryptionReady = isEncryptionConfigured();
   const r2Ready = r2Configured();
@@ -104,6 +108,10 @@ export default async function SettingsPage({
   const providerUse = providerUsage();
   const providerProfiles = listProviderProfiles();
   const r2Public = Boolean(process.env.R2_PUBLIC_BASE_URL);
+  const integrationViews = listIntegrationViews();
+  const secondaryProfile = socialApiProfile(brand.id);
+  const secondaryUse = socialApiUsage();
+  const supportEmail = getSetting("support.email", process.env.SUPPORT_EMAIL || "");
 
   function providerFor(platform: string): OAuthPlatform {
     if (platform === "facebook" || platform === "instagram") return "meta";
@@ -154,6 +162,16 @@ export default async function SettingsPage({
           untouched.
         </Notice>
       ) : null}
+
+      <IntegrationSettings
+        views={integrationViews}
+        primaryUsage={providerUse}
+        secondaryUsage={secondaryUse}
+        socialProfile={secondaryProfile}
+        publicUrl={appUrl}
+        supportEmail={supportEmail}
+        canManage={user.role === "owner"}
+      />
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-5">

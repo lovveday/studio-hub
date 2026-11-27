@@ -1,5 +1,10 @@
 import type { BrandFact, BrandProfile, FactCandidate, PlatformVariantDraft } from "./types";
 import { platformMeta } from "./platforms";
+import {
+  integrationSecret,
+  transcriptionPreference,
+  whisperConfig,
+} from "./providers/credentials";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const MODEL_FALLBACKS = (process.env.GEMINI_MODEL_FALLBACKS || "gemini-3.6-flash,gemini-3.1-flash-lite")
@@ -11,15 +16,23 @@ const DEEPSEEK_BASE = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export function aiKey(): string {
-  return process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+  return (
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    integrationSecret("gemini", "ai")
+  );
 }
 
 export function deepseekKey(): string {
-  return process.env.DEEPSEEK_API_KEY || "";
+  return process.env.DEEPSEEK_API_KEY || integrationSecret("deepseek", "ai");
 }
 
 export function deepgramKey(): string {
-  return process.env.DEEPGRAM_API_KEY || process.env.deepgram_api_key || "";
+  return (
+    process.env.DEEPGRAM_API_KEY ||
+    process.env.deepgram_api_key ||
+    integrationSecret("deepgram", "transcription")
+  );
 }
 
 function deepgramBase(): string {
@@ -65,6 +78,47 @@ async function transcribeWithDeepgram(buffer: Buffer, mimeType: string): Promise
   };
   const text = data.results?.channels?.[0]?.alternatives?.[0]?.transcript?.trim() ?? "";
   if (!text) throw new Error("Deepgram returned an empty transcript.");
+  return text;
+}
+
+async function transcribeWithWhisper(buffer: Buffer, mimeType: string): Promise<string> {
+  if (buffer.byteLength > 25 * 1024 * 1024) {
+    throw new Error("This audio is over 25 MB; Whisper needs a smaller file.");
+  }
+  const config = whisperConfig();
+  const url = new URL(config.baseUrl);
+  const localHost =
+    url.hostname === "localhost" ||
+    url.hostname === "127.0.0.1" ||
+    url.hostname === "::1" ||
+    /^10\./.test(url.hostname) ||
+    /^192\.168\./.test(url.hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && config.allowLocal && localHost)) {
+    throw new Error("Whisper must use HTTPS unless a local endpoint is explicitly allowed.");
+  }
+  if (url.hostname === "169.254.169.254" || url.hostname.endsWith(".internal")) {
+    throw new Error("That Whisper endpoint is not allowed.");
+  }
+  const key = integrationSecret("whisper", "transcription");
+  const form = new FormData();
+  const extension = (mimeType.split("/")[1] || "webm").split(";")[0];
+  form.append("file", new Blob([new Uint8Array(buffer)], { type: mimeType || "audio/webm" }), `audio.${extension}`);
+  form.append("model", config.model);
+  form.append("response_format", "json");
+  const response = await fetch(`${config.baseUrl}/audio/transcriptions`, {
+    method: "POST",
+    headers: key ? { Authorization: `Bearer ${key}` } : undefined,
+    body: form,
+    signal: AbortSignal.timeout(90_000),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Whisper ${response.status}: ${body.slice(0, 300)}`);
+  }
+  const data = (await response.json()) as { text?: string };
+  const text = data.text?.trim() ?? "";
+  if (!text) throw new Error("Whisper returned an empty transcript.");
   return text;
 }
 
@@ -248,7 +302,7 @@ export async function generateJson<T>(prompt: string, fallback: T): Promise<T> {
 
 export type TranscriptionResult = {
   text: string;
-  mode: "deepgram" | "gemini" | "manual";
+  mode: "deepgram" | "whisper" | "gemini" | "manual";
   error?: string;
 };
 
@@ -257,53 +311,68 @@ export async function transcribeAudio(
   mimeType: string,
   context = ""
 ): Promise<TranscriptionResult> {
-  let deepgramError = "";
+  const preference = transcriptionPreference();
+  const all = ["deepgram", "whisper", "gemini"] as const;
+  const order = preference === "auto" ? [...all] : [preference, ...all.filter((p) => p !== preference)];
+  const errors: string[] = [];
+  const whisperReady = Boolean(
+    integrationSecret("whisper", "transcription") ||
+      process.env.WHISPER_BASE_URL ||
+      process.env.WHISPER_API_KEY ||
+      process.env.OPENAI_API_KEY
+  );
 
-  if (deepgramKey()) {
-    try {
-      const text = await transcribeWithDeepgram(buffer, mimeType);
-      return { text, mode: "deepgram" };
-    } catch (error) {
-      deepgramError = (error as Error).message;
-      console.warn("[ai] Deepgram transcription fallback:", deepgramError);
+  for (const provider of order) {
+    if (provider === "deepgram") {
+      if (!deepgramKey()) continue;
+      try {
+        return { text: await transcribeWithDeepgram(buffer, mimeType), mode: "deepgram" };
+      } catch (error) {
+        errors.push(`Deepgram: ${(error as Error).message}`);
+      }
+    }
+
+    if (provider === "whisper") {
+      if (!whisperReady) continue;
+      try {
+        return { text: await transcribeWithWhisper(buffer, mimeType), mode: "whisper" };
+      } catch (error) {
+        errors.push(`Whisper: ${(error as Error).message}`);
+      }
+    }
+
+    if (provider === "gemini") {
+      if (!aiKey()) continue;
+      if (buffer.byteLength > 18 * 1024 * 1024) {
+        errors.push("Gemini: audio is over 18 MB");
+        continue;
+      }
+      try {
+        const base64 = buffer.toString("base64");
+        const text = await callGemini(
+          [
+            {
+              text: `Transcribe this audio accurately. It may be a WhatsApp voice note or dictation about a client brand. Preserve names, handles, prices and dates exactly. Return only the transcript, no commentary. Brand context: ${context}`,
+            },
+            { inlineData: { mimeType: mimeType || "audio/ogg", data: base64 } },
+          ],
+          { temperature: 0.1 }
+        );
+        return { text: text.trim(), mode: "gemini" };
+      } catch (error) {
+        errors.push(`Gemini: ${(error as Error).message}`);
+      }
     }
   }
 
-  if (!aiKey()) {
-    return {
-      text: "",
-      mode: "manual",
-      error: deepgramError
-        ? `Deepgram failed and no Gemini key is configured: ${deepgramError}`
-        : "No transcription key configured. Add DEEPGRAM_API_KEY or GEMINI_API_KEY, or paste the transcript manually.",
-    };
-  }
-  if (buffer.byteLength > 18 * 1024 * 1024) {
-    return {
-      text: "",
-      mode: "manual",
-      error: "This audio is over 18 MB. Split it or paste the transcript manually.",
-    };
-  }
-  const base64 = buffer.toString("base64");
-  try {
-    const text = await callGemini(
-      [
-        {
-          text: `Transcribe this audio accurately. It may be a WhatsApp voice note or dictation about a client brand. Preserve names, handles, prices and dates exactly. Return only the transcript, no commentary. Brand context: ${context}`,
-        },
-        { inlineData: { mimeType: mimeType || "audio/ogg", data: base64 } },
-      ],
-      { temperature: 0.1 }
-    );
-    return { text: text.trim(), mode: "gemini" };
-  } catch (error) {
-    return {
-      text: "",
-      mode: "manual",
-      error: `Could not transcribe automatically: ${(error as Error).message}`,
-    };
-  }
+  const configured = Boolean(deepgramKey() || whisperReady || aiKey());
+  return {
+    text: "",
+    mode: "manual",
+    error: configured
+      ? `Could not transcribe automatically. ${errors.join(" | ")}`
+      : "No transcription provider configured. Add Deepgram, Whisper or Gemini, or paste the transcript manually.",
+  };
 }
 
 export async function describeImage(

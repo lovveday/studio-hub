@@ -22,6 +22,8 @@ import {
 } from "@/lib/data";
 import { formatDateTime, relativeTime, truncate } from "@/lib/utils";
 import { platformMeta } from "@/lib/platforms";
+import { uploadPostConfigured } from "@/lib/providers/uploadpost";
+import { aiStatus } from "@/lib/ai";
 import { BarList, Donut, Sparkline } from "@/components/charts";
 import {
   Badge,
@@ -31,6 +33,7 @@ import {
   CardHeader,
   EmptyState,
   MetricCard,
+  Notice,
   PageHeader,
   PlatformStack,
   StatusBadge,
@@ -90,6 +93,16 @@ export default async function DashboardPage() {
           </>
         }
       />
+
+      {!uploadPostConfigured() || !aiStatus().configured ? (
+        <Notice tone="info">
+          <span className="font-semibold">Finish setup:</span> add your publishing and AI keys in{" "}
+          <Link href="/settings" className="font-semibold text-coral hover:underline">
+            Settings → API connections
+          </Link>
+          . No <code>.env.local</code> editing is needed.
+        </Notice>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard

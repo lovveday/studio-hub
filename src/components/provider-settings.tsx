@@ -51,8 +51,8 @@ export function ProviderSettings({
       <div className="space-y-5 p-5">
         {!configured ? (
           <Notice tone="info">
-            Add <code>UPLOADPOST_API_KEY</code> to <code>.env.local</code> to turn on automatic
-            posting. Until then every channel uses the assisted kit. The key stays server-side.
+            Save your Upload-Post key in <strong>API connections</strong> above to turn on automatic
+            posting. The key stays server-side; no <code>.env.local</code> editing is needed.
           </Notice>
         ) : (
           <>

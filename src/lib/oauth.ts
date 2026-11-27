@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import { all, get, run } from "./db";
 import { encryptSecret } from "./crypto";
+import { getAppUrl } from "./app-url";
+import { integrationConfig, integrationSecret } from "./providers/credentials";
 import type { SocialAccount } from "./types";
 
 export type OAuthPlatform = "meta" | "google" | "linkedin" | "x" | "tiktok" | "mock";
@@ -14,15 +16,15 @@ export function isOAuthPlatform(value: string): value is OAuthPlatform {
 export function oauthProviderConfigured(platform: OAuthPlatform): boolean {
   switch (platform) {
     case "meta":
-      return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
+      return Boolean(env("META_APP_ID") && env("META_APP_SECRET"));
     case "google":
-      return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+      return Boolean(env("GOOGLE_CLIENT_ID") && env("GOOGLE_CLIENT_SECRET"));
     case "linkedin":
-      return Boolean(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET);
+      return Boolean(env("LINKEDIN_CLIENT_ID") && env("LINKEDIN_CLIENT_SECRET"));
     case "x":
-      return Boolean(process.env.X_CLIENT_ID && process.env.X_CLIENT_SECRET);
+      return Boolean(env("X_CLIENT_ID") && env("X_CLIENT_SECRET"));
     case "tiktok":
-      return Boolean(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET);
+      return Boolean(env("TIKTOK_CLIENT_KEY") && env("TIKTOK_CLIENT_SECRET"));
     case "mock":
       return true;
   }
@@ -40,7 +42,7 @@ export type OAuthState = {
 };
 
 export function oauthBaseUrl(request: Request): string {
-  return (process.env.APP_URL || new URL(request.url).origin).replace(/\/$/, "");
+  return getAppUrl() || new URL(request.url).origin;
 }
 
 export function callbackUrl(request: Request, platform: OAuthPlatform): string {
@@ -94,12 +96,29 @@ export function consumeOAuthState(state: string, platform: OAuthPlatform): OAuth
 }
 
 function env(name: string): string {
-  return process.env[name] || "";
+  const direct = process.env[name] || "";
+  if (direct) return direct;
+  const mapping: Record<string, { provider: string; configKey?: string }> = {
+    META_APP_ID: { provider: "meta", configKey: "clientId" },
+    META_APP_SECRET: { provider: "meta" },
+    GOOGLE_CLIENT_ID: { provider: "google", configKey: "clientId" },
+    GOOGLE_CLIENT_SECRET: { provider: "google" },
+    LINKEDIN_CLIENT_ID: { provider: "linkedin", configKey: "clientId" },
+    LINKEDIN_CLIENT_SECRET: { provider: "linkedin" },
+    X_CLIENT_ID: { provider: "x", configKey: "clientId" },
+    X_CLIENT_SECRET: { provider: "x" },
+    TIKTOK_CLIENT_KEY: { provider: "tiktok", configKey: "clientId" },
+    TIKTOK_CLIENT_SECRET: { provider: "tiktok" },
+  };
+  const entry = mapping[name];
+  if (!entry) return "";
+  if (entry.configKey) return String(integrationConfig(entry.provider)[entry.configKey] ?? "");
+  return integrationSecret(entry.provider, "oauth") || "";
 }
 
 function requireEnv(name: string, label: string): string {
   const value = env(name);
-  if (!value) throw new Error(`${label} is not configured. Add ${name} to .env.local.`);
+  if (!value) throw new Error(`${label} is not configured. Add it in Settings -> API connections or to .env.local.`);
   return value;
 }
 

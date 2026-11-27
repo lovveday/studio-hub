@@ -1,19 +1,39 @@
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 const PREFIX = "v1";
+const KEY_FILE = path.join(process.cwd(), "data", ".app-key");
+
+function keyFileValue(): string {
+  try {
+    if (!fs.existsSync(KEY_FILE)) return "";
+    return fs.readFileSync(KEY_FILE, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
 
 function encryptionKey(): Buffer {
-  const raw = process.env.APP_ENCRYPTION_KEY;
-  if (!raw || raw.length < 16) {
-    throw new Error(
-      "APP_ENCRYPTION_KEY is not configured. Add a long random value to .env.local before connecting a real account."
-    );
+  const envKey = process.env.APP_ENCRYPTION_KEY;
+  if (envKey && envKey.length >= 16) {
+    return crypto.createHash("sha256").update(envKey).digest();
+  }
+
+  let raw = keyFileValue();
+  if (!raw) {
+    fs.mkdirSync(path.dirname(KEY_FILE), { recursive: true });
+    raw = crypto.randomBytes(32).toString("hex");
+    fs.writeFileSync(KEY_FILE, `${raw}\n`, { mode: 0o600 });
+  }
+  if (raw.length < 16) {
+    throw new Error("The local app encryption key is invalid. Replace data/.app-key.");
   }
   return crypto.createHash("sha256").update(raw).digest();
 }
 
 export function isEncryptionConfigured(): boolean {
-  return Boolean(process.env.APP_ENCRYPTION_KEY);
+  return Boolean(process.env.APP_ENCRYPTION_KEY) || Boolean(keyFileValue());
 }
 
 export function encryptSecret(value: string): string {

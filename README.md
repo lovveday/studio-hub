@@ -16,7 +16,7 @@ npm run dev
 
 Do **not** pipe `next dev` output into a file inside this folder. Next watches the project and will reload in a loop when that log file changes. Use the terminal, or write logs to `$env:TEMP`.
 
-Deployment/callback guidance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Short operator checklist: [docs/DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md). Platform signup/handoff list: [docs/SIGNUP-CHECKLIST.md](docs/SIGNUP-CHECKLIST.md). Temporary laptop-as-server runbook: [docs/LAPTOP-SERVER.md](docs/LAPTOP-SERVER.md). For an always-on deployment, use Docker Compose (app + worker + Caddy) on a VPS or Oracle Always Free ARM — **not** Vercel or Codespaces. Scheduled posts publish only while the worker is running.
+Deployment/callback guidance: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Short operator checklist: [docs/DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md). Platform signup/handoff list: [docs/SIGNUP-CHECKLIST.md](docs/SIGNUP-CHECKLIST.md). API keys and provider routing: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Temporary laptop-as-server runbook: [docs/LAPTOP-SERVER.md](docs/LAPTOP-SERVER.md). For an always-on deployment, use Docker Compose (app + worker + Caddy) on a VPS or Oracle Always Free ARM — **not** Vercel or Codespaces. Scheduled posts publish only while the worker is running.
 
 Demo accounts (seeded):
 
@@ -168,20 +168,22 @@ There is no `LICENSE` file in this repository yet. Add one before redistributing
 
 ## Environment
 
-Copy `.env.example` to `.env.local`. Never commit `.env.local` or paste real keys into `.env.example`.
+Provider keys can now be entered in **Settings → API connections** and are encrypted in the database. `.env.local` is only needed for bootstrapping/backwards compatibility. See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 
 - `GEMINI_API_KEY` enables real writing/transcription; without it the hub uses demo templates.
-- `APP_URL` is the base for OAuth callbacks and approval links. Meta requires HTTPS, so use a tunnel or deployed URL; Google accepts localhost.
-- `APP_ENCRYPTION_KEY` is required before storing real OAuth tokens. Generate a long random value.
-- Platform app IDs/secrets are optional until you connect a real account.
-- `UPLOADPOST_API_KEY`, `UPLOADPOST_PLAN` (`free`/`paid`) and `UPLOADPOST_FREE_LIMIT` enable automatic publishing without app reviews. See [docs/UPLOAD-POST.md](docs/UPLOAD-POST.md).
+- `APP_URL` is the base for OAuth callbacks and approval links; it can also be set in **Settings → App URL and support**.
+- `APP_ENCRYPTION_KEY` is optional. If absent, the app generates `data/.app-key` on first key save; back it up.
+- Platform app IDs/secrets are optional until you connect a real account; they can be saved in the app.
+- `UPLOADPOST_API_KEY`, `UPLOADPOST_PLAN` (`free`/`paid`) and `UPLOADPOST_FREE_LIMIT` are the environment fallback for the primary publisher. See [docs/UPLOAD-POST.md](docs/UPLOAD-POST.md).
+- `SOCIALAPI_API_KEY` is the optional secondary publisher (SocialAPI.ai Hobby: 2 brands, 10 posts/month).
+- `DEEPGRAM_API_KEY` is the preferred voice transcriber. `WHISPER_API_KEY`, `WHISPER_BASE_URL` and `WHISPER_MODEL` enable OpenAI/Groq/self-hosted Whisper.
 - `META_LOGIN_CONFIG_ID` is optional; when set, Meta uses the Facebook Login for Business configuration instead of a raw scope list.
-- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` enable 300 MB direct multipart uploads. Without them, the local chunk fallback is used.
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` enable 300 MB direct multipart uploads. They can also be saved in the app.
 - `DOMAIN` is used by Caddy in Docker; `SUPPORT_EMAIL` is shown on the privacy/terms/data-deletion pages.
 
 ## Known limits / next slice
 
-- **Automatic publishing** is available through the optional Upload-Post adapter: one API key, no app reviews, 10 free uploads/month, 2 profiles, no TikTok on Free. After the limit, every target falls back to assisted mode. Direct Meta/YouTube/LinkedIn/X/TikTok adapters remain optional; without Upload-Post they produce assisted attempts.
+- **Automatic publishing** uses Upload-Post first and can fall back to SocialAPI.ai Hobby after the Upload-Post limit. Upload-Post Free: 10 uploads/month, 2 profiles, no TikTok. SocialAPI Hobby: 2 brands, 10 posts/month. When both are exhausted, targets fall back to assisted. See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 - **Stories are assisted by platform rule**, not by choice: Instagram Story media can be published by API but interactive stickers cannot; TikTok has no Story publishing API. The Story Planner schedules the creative + sticker script and reminds you to post natively. See [docs/STORIES.md](docs/STORIES.md).
 - Meta rejects a localhost callback. Use a tunnel (ngrok/cloudflared) or deploy first; the Settings page shows the exact callback base it will send.
 - Auto-like/auto-reply is modelled in the UI and data model but not executed against platforms. Instagram and LinkedIn support comment likes; YouTube does not expose a comment-like API; TikTok is partner-gated and its audit may reject an internal agency tool.
