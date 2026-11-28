@@ -332,7 +332,7 @@ export function NewTeardown({
 
   const tabs: Array<{ id: Mode; label: string; short: string; hint: string; icon: typeof Upload }> = [
     { id: "upload", label: "Upload a clip", short: "Upload", hint: "MP4, MOV or WebM up to 100 MB", icon: Upload },
-    { id: "link", label: "Paste a link", short: "Link", hint: "Metadata + your transcript", icon: Link2 },
+    { id: "link", label: "Paste a link", short: "Link", hint: "Public metadata only; upload the clip to watch it", icon: Link2 },
     { id: "text", label: "Paste a script", short: "Script", hint: "Transcript-only teardown", icon: FileVideo },
   ];
 
@@ -527,6 +527,12 @@ export function NewTeardown({
                 </Button>
               </div>
             </Field>
+
+            <Notice tone="info">
+              A link exposes only public metadata. Instagram and TikTok do not give the lab their
+              video file, so the AI cannot watch the motion from a link. Upload the clip for a real
+              frame-by-frame teardown; caption and transcript then become optional.
+            </Notice>
 
             {linkError ? <Notice tone="warning">{linkError}</Notice> : null}
 

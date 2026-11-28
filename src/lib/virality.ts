@@ -586,6 +586,36 @@ async function oEmbed(url: string, platform: string): Promise<Partial<LinkMetada
   }
 }
 
+function creatorFromUrl(url: URL): string {
+  const host = url.hostname.replace(/^www\./, "");
+  const parts = url.pathname.split("/").filter(Boolean);
+  if (host.includes("tiktok.com")) {
+    const at = parts.find((part) => part.startsWith("@"));
+    if (at) return at;
+  }
+  if (host.includes("instagram.com")) {
+    const first = parts[0];
+    if (first && !["reel", "reels", "p", "tv", "stories", "explore"].includes(first)) return `@${first}`;
+  }
+  if (host.includes("x.com") || host.includes("twitter.com")) {
+    if (parts[0] && !["i", "home", "search", "intent"].includes(parts[0])) return `@${parts[0]}`;
+  }
+  if (host.includes("youtube.com") || host.includes("youtu.be")) {
+    const at = parts.find((part) => part.startsWith("@"));
+    if (at) return at;
+    const channel = parts.indexOf("channel");
+    if (channel >= 0 && parts[channel + 1]) return parts[channel + 1];
+  }
+  return "";
+}
+
+function creatorFromTitle(title: string): string {
+  const bracket = title.match(/\(@([a-zA-Z0-9._]+)\)/);
+  if (bracket) return `@${bracket[1]}`;
+  const at = title.match(/(?:^|\s)@([a-zA-Z0-9._]{2,})/);
+  return at ? `@${at[1]}` : "";
+}
+
 export async function fetchLinkMetadata(rawUrl: string): Promise<LinkMetadata> {
   const empty: LinkMetadata = {
     ok: false,
@@ -672,6 +702,14 @@ export async function fetchLinkMetadata(rawUrl: string): Promise<LinkMetadata> {
     merged.note =
       "That page would not share its metadata publicly. Add the caption or transcript below so the teardown is grounded.";
   }
+  const genericCreator = /^(instagram|tiktok|youtube|facebook|linkedin|x|twitter)$/i.test(
+    merged.creator.trim()
+  );
+  merged.creator =
+    (!genericCreator ? merged.creator : "") ||
+    creatorFromUrl(url) ||
+    creatorFromTitle(merged.title) ||
+    "";
   return merged;
 }
 

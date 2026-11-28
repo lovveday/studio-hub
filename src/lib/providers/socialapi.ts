@@ -169,10 +169,31 @@ function localPlatform(platform: string): string {
 export async function ensureSocialApiBrand(brandId: string, brandName: string): Promise<SocialApiProfile> {
   const existing = socialApiProfile(brandId);
   if (existing?.remote_id) return existing;
-  const remote = await apiCall<{ id?: string; name?: string }>("/brands", {
-    method: "POST",
-    body: JSON.stringify({ name: brandName }),
-  });
+  let remote: { id?: string; name?: string };
+  try {
+    remote = await apiCall<{ id?: string; name?: string }>("/brands", {
+      method: "POST",
+      body: JSON.stringify({ name: brandName }),
+    });
+  } catch (error) {
+    const body = error instanceof SocialApiError ? (error.body as { error?: { code?: string } }) : null;
+    const limitReached =
+      error instanceof SocialApiError &&
+      (error.status === 403 || Boolean(body?.error?.code?.includes("brands_limit")));
+    if (!limitReached) throw error;
+    const brands = await listSocialApiBrands();
+    const reusable =
+      brands.find((brand) => brand.name.toLowerCase() === "default" && brand.accounts_count === 0) ??
+      brands.find((brand) => brand.accounts_count === 0);
+    if (!reusable) {
+      throw new SocialApiError(
+        "SocialAPI brand limit reached, and both brands already have accounts. Reuse or remove one in SocialAPI, then try again.",
+        403,
+        error.body
+      );
+    }
+    remote = { id: reusable.id, name: reusable.name };
+  }
   if (!remote.id) throw new SocialApiError("SocialAPI did not return a brand ID.");
   const now = new Date().toISOString();
   run(
@@ -182,6 +203,19 @@ export async function ensureSocialApiBrand(brandId: string, brandName: string): 
     [crypto.randomUUID(), brandId, PROVIDER, remote.id, brandName, remote.id, now, now]
   );
   return socialApiProfile(brandId)!;
+}
+
+export async function listSocialApiBrands(): Promise<Array<{ id: string; name: string; accounts_count: number }>> {
+  const payload = await apiCall<{
+    data?: Array<{ id?: string; name?: string; accounts_count?: number }>;
+  }>("/brands");
+  return (payload.data ?? [])
+    .map((brand) => ({
+      id: String(brand.id ?? ""),
+      name: String(brand.name ?? ""),
+      accounts_count: Number(brand.accounts_count ?? 0),
+    }))
+    .filter((brand) => brand.id);
 }
 
 export async function refreshSocialApiProfile(brandId: string): Promise<SocialApiProfile> {
