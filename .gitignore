@@ -11,6 +11,10 @@ storage/virality/
 .tmp/
 .smoke/
 .taste-skill/
+.agents/
+.claude/
+agent/
+skills-lock.json
 .env
 .env.local
 *.log
